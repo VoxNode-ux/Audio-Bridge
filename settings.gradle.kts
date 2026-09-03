@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AudioBridge"
 include(":app")
+
