@@ -4,7 +4,7 @@ plugins {
     // 8.7-8.9 cap out at API 35. Staying on the 8.x line (not jumping to AGP 9.x)
     // avoids that major version's DSL/build-model breaking changes, which aren't
     // worth the risk for a project built and maintained via Termux CLI.
-    id("com.android.application") version "8.10.0" apply false
+    id("com.android.application") version "9.4.0" apply false
     id("org.jetbrains.kotlin.android") version "1.9.24" apply false
 }
 
