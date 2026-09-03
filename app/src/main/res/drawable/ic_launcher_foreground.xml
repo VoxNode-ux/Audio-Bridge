@@ -1,1 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Two devices connected by a soundwave arc — phone-to-tablet audio bridge motif -->
+    <path
+        android:fillColor="#4CA8FF"
+        android:pathData="M30,40 a4,4 0 0 1 4,-4 h6 a4,4 0 0 1 4,4 v28 a4,4 0 0 1 -4,4 h-6 a4,4 0 0 1 -4,-4 z" />
+    <path
+        android:fillColor="#9DD9D2"
+        android:pathData="M64,32 a4,4 0 0 1 4,-4 h10 a4,4 0 0 1 4,4 v44 a4,4 0 0 1 -4,4 h-10 a4,4 0 0 1 -4,-4 z" />
+    <path
+        android:fillColor="#A8C7FA"
+        android:strokeWidth="3"
+        android:pathData="M44,54 q8,-14 16,0"
+        android:strokeColor="#A8C7FA"
+        android:fillType="evenOdd" />
+</vector>
+
  
