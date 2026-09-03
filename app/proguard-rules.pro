@@ -8,3 +8,4 @@
 
 # NSD / mDNS callback classes accessed via reflection by the platform.
 -keep class com.audiobridge.app.discovery.** { *; }
+
