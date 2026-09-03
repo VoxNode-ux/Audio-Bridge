@@ -29,3 +29,4 @@ jobs:
       # Gradle project (they aren't automatic the way they are for npm/pip).
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@v6
+ 
