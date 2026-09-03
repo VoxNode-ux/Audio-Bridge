@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Gradle dependencies (AndroidX, Compose, Kotlin coroutines, etc.)
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # Keep the GitHub Actions workflow action versions themselves current too —
+  # otherwise this repo would need the same kind of manual "is this action
+  # deprecated yet" check that gitleaks-action@v2 just needed, but recurring.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
