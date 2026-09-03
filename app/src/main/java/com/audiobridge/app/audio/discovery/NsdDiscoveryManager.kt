@@ -196,3 +196,4 @@ class NsdDiscoveryManager(private val context: Context) {
         discoveryListener = null
     }
 } 
+
