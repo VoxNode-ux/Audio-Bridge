@@ -5,7 +5,7 @@ plugins {
     // avoids that major version's DSL/build-model breaking changes, which aren't
     // worth the risk for a project built and maintained via Termux CLI.
     id("com.android.application") version "8.10.0" apply false
-    id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+    id("org.jetbrains.kotlin.android") version "2.4.10" apply false
 }
 
 tasks.register("clean", Delete::class) {
