@@ -1,1 +1,10 @@
- 
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Raw PCM streaming over UDP/TCP on your own hotspot/WiFi-Direct link is plaintext by
+  design (no TLS handshake overhead — that's where the low latency comes from).
+  This only allows cleartext on local/private network traffic, not the wider internet.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
+  
