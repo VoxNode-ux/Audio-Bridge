@@ -1,1 +1,6 @@
+ <?xml version="1.0" encoding="utf-8"?>
+<!-- Backups disabled app-wide (android:allowBackup="false"); file kept only to satisfy the
+     manifest reference cleanly and to document intent if backup is ever re-enabled. -->
+<full-backup-content>
+</full-backup-content>
  
