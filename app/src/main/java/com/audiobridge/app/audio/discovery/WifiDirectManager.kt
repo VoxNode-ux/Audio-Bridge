@@ -312,4 +312,5 @@ class WifiDirectManager(
     fun disconnect() {
         runCatching { manager.removeGroup(channel, null) }
     }
-} 
+}
+
