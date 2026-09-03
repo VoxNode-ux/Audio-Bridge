@@ -24,16 +24,15 @@ jobs:
           java-version: '17'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        uses: gradle/actions/setup-gradle@v3
+        with: 
+          gradle-version: '8.11.1'
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+        run: gradle testDebugUnitTest
 
       - name: Run Android Lint
-        run: ./gradlew lintDebug
+        run: gradle lintDebug
 
       - name: Upload Lint results
         if: always()
@@ -44,7 +43,7 @@ jobs:
           retention-days: 14
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: gradlew assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
