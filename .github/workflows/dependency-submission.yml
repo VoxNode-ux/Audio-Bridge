@@ -21,12 +21,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Resolves the full Gradle dependency tree (including transitive deps) and
-      # submits it to GitHub's Dependency Graph. Without this workflow, the
-      # dependency-review-action on PRs has nothing populated to compare against,
-      # and Dependabot alerts won't fire for vulnerable Gradle dependencies at all —
-      # this is the piece that actually makes those two features work for a
-      # Gradle project (they aren't automatic the way they are for npm/pip).
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@v6
- 
