@@ -3,6 +3,7 @@ package com.audiobridge.app.discovery
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.util.Log
 import com.audiobridge.app.util.DeviceRole
@@ -26,6 +27,18 @@ class NsdDiscoveryManager(private val context: Context) {
 
     private val nsdManager: NsdManager by lazy {
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
+    }
+
+    // Without an explicit multicast lock, some devices/hotspot configurations silently
+    // suppress incoming mDNS multicast packets to save battery — registerService() and
+    // discoverServices() both appear to succeed, but the other device's announcement
+    // never actually arrives. This was almost certainly why Hotspot/Wi-Fi discovery was
+    // finding nothing despite both devices being correctly connected to the same
+    // network. One shared lock covers both registration and discovery since they're
+    // always active together in practice.
+    private val multicastLock: WifiManager.MulticastLock by lazy {
+        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        wifiManager.createMulticastLock("audiobridge-mdns").apply { setReferenceCounted(true) }
     }
 
     private var registrationListener: NsdManager.RegistrationListener? = null
