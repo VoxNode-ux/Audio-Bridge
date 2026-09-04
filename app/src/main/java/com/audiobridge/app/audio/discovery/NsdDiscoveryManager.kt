@@ -79,13 +79,17 @@ class NsdDiscoveryManager(private val context: Context) {
                 Log.e(TAG, "Unregistration failed: code=$errorCode")
             }
         }
-        discoveryListener = listener
-        nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
+        registrationListener = listener
+        runCatching { multicastLock.acquire() }
+        nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, listener)
+    }
 
-        awaitClose {
-            runCatching { nsdManager.stopServiceDiscovery(listener) }
-            discoveryListener = null
+    fun unregisterService() {
+        registrationListener?.let {
+            runCatching { nsdManager.unregisterService(it) }
+            runCatching { if (multicastLock.isHeld) multicastLock.release() }
         }
+        registrationListener = null
     }
 
     /**
@@ -208,5 +212,4 @@ class NsdDiscoveryManager(private val context: Context) {
         }
         discoveryListener = null
     }
-} 
-
+}
