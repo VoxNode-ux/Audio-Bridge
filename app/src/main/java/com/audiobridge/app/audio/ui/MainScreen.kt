@@ -203,15 +203,24 @@ private fun PcmFormatSection(uiState: MainUiState, onPcmFormatChange: (PcmFormat
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                    }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
-                if (!isSelected) {
+                if (!isSelected && !isBluetoothIncompatible) {
                     OutlinedButton(
                         onClick = { onPcmFormatChange(format) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isBluetoothIncompatible
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Use this format")
+                    }
+                }
+                if (!isSelected && isBluetoothIncompatible) {
+                    OutlinedButton(
+                        onClick = { },
+                        enabled = false,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Unavailable for Bluetooth")
                     }
                 }
             }
@@ -259,7 +268,11 @@ private fun DiscoverySection(
                             supportingContent = { Text(device.address) },
                             trailingContent = {
                                 if (isSelected) {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                                    Icon(
+                                        Icons.Filled.CheckCircle,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                         )
@@ -284,10 +297,21 @@ private fun DiscoverySection(
                 ScanButton(isDiscovering = uiState.isDiscovering, onStartDiscovery = onStartDiscovery)
 
                 uiState.wifiDirectPeers.forEach { peer ->
+                    val isSelected = uiState.config.lastDeviceName.isNotEmpty() &&
+                        peer.deviceName == uiState.config.lastDeviceName
                     Column {
                         ListItem(
                             headlineContent = { Text(peer.deviceName) },
-                            supportingContent = { Text(peer.deviceAddress) }
+                            supportingContent = { Text(peer.deviceAddress) },
+                            trailingContent = {
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Filled.CheckCircle,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                         )
                         OutlinedButton(
                             onClick = { onSelectWifiDirectPeer(peer) },
@@ -318,7 +342,11 @@ private fun DiscoverySection(
                             supportingContent = { Text("${device.host}:${device.port}") },
                             trailingContent = {
                                 if (isSelected) {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                                    Icon(
+                                        Icons.Filled.CheckCircle,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                         )
@@ -353,7 +381,9 @@ private fun ScanButton(isDiscovering: Boolean, onStartDiscovery: () -> Unit) {
     ) {
         if (isDiscovering) {
             CircularProgressIndicator(
-                modifier = Modifier.height(18.dp).width(18.dp),
+                modifier = Modifier
+                    .height(18.dp)
+                    .width(18.dp),
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.onSecondary
             )
@@ -370,7 +400,10 @@ private fun ScanButton(isDiscovering: Boolean, onStartDiscovery: () -> Unit) {
 @Composable
 private fun VolumeSection(uiState: MainUiState, onVolumeChange: (Float) -> Unit) {
     SectionCard(title = "Volume") {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Icon(Icons.Filled.VolumeUp, contentDescription = null)
             Slider(
                 value = uiState.config.volume,
@@ -384,9 +417,6 @@ private fun VolumeSection(uiState: MainUiState, onVolumeChange: (Float) -> Unit)
 
 @Composable
 private fun SafetyBufferSection(uiState: MainUiState, onSafetyBufferChange: (Int) -> Unit) {
-    // Range matches AudioPlaybackEngine.setSafetyBuffer()'s own coerceIn(20, 1000) —
-    // keeping the slider's bounds in sync with the engine's clamp avoids a slider that
-    // can show a value the engine would silently reject.
     val bufferMs = uiState.config.safetyBufferMs
     SectionCard(title = "Jitter Buffer") {
         Text(
@@ -396,7 +426,10 @@ private fun SafetyBufferSection(uiState: MainUiState, onSafetyBufferChange: (Int
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Slider(
                 value = bufferMs.toFloat(),
                 onValueChange = { onSafetyBufferChange(it.toInt()) },
@@ -410,6 +443,10 @@ private fun SafetyBufferSection(uiState: MainUiState, onSafetyBufferChange: (Int
 
 @Composable
 private fun StatsSection(uiState: MainUiState) {
+    val role = uiState.config.role
+    val packetsLabel = if (role == DeviceRole.SENDER) "Packets Sent" else "Packets Received"
+    val packetValue = if (role == DeviceRole.SENDER) uiState.streamStats.packetsSent else uiState.streamStats.packetsReceived
+
     SectionCard(title = "Live Stats") {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
@@ -425,8 +462,8 @@ private fun StatsSection(uiState: MainUiState) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
-                label = "Packets Received",
-                value = "${uiState.streamStats.packetsReceived}",
+                label = packetsLabel,
+                value = "$packetValue",
                 modifier = Modifier.weight(1f)
             )
             StatCard(
@@ -468,6 +505,12 @@ private fun StreamControlButton(
     val isActive = uiState.connectionState == ConnectionState.STREAMING ||
         uiState.connectionState == ConnectionState.CONNECTING
     val canStart = uiState.config.lastDeviceHost.isNotEmpty() || uiState.config.role == DeviceRole.RECEIVER
+    val role = uiState.config.role
+    val buttonText = if (isActive) {
+        "Stop Streaming"
+    } else {
+        if (role == DeviceRole.SENDER) "Start Sending" else "Start Receiving"
+    }
 
     Button(
         onClick = { if (isActive) onStop() else onStart() },
@@ -483,7 +526,7 @@ private fun StreamControlButton(
         Icon(if (isActive) Icons.Filled.Stop else Icons.Filled.PlayArrow, contentDescription = null)
         Spacer(Modifier.width(8.dp))
         Text(
-            text = if (isActive) "Stop Streaming" else "Start Streaming",
+            text = buttonText,
             style = MaterialTheme.typography.titleMedium
         )
     }
