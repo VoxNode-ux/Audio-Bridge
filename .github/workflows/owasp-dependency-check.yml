@@ -33,6 +33,8 @@ jobs:
 
       - name: Run OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
+        env:
+          JAVA_HOME: ''
         with:
           project: 'AudioBridge'
           path: '.'
