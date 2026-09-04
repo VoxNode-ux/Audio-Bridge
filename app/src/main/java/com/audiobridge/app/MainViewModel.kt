@@ -1,10 +1,9 @@
+package com.audiobridge.app
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-
-package com.audiobridge.app
-
 import android.app.Application
 import android.content.Context
 import android.net.wifi.p2p.WifiP2pManager
