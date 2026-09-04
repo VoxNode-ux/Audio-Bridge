@@ -28,8 +28,13 @@
          Android 10-12 (API 29-32) — NEARBY_WIFI_DEVICES above was only introduced in,
          and only covers P2P discovery starting on, API 33. Capped with maxSdkVersion
          so it's a no-op (and never shown to the user) on API 33+ devices, which are
-         already covered by the narrower NEARBY_WIFI_DEVICES grant instead. -->
+         already covered by the narrower NEARBY_WIFI_DEVICES grant instead.
+         ACCESS_COARSE_LOCATION is required alongside FINE per Android 12+ policy
+         (lint's CoarseFineLocation check) — same maxSdkVersion cap, since it exists
+         only to satisfy that pairing rule for the same API 29-32 window. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
         android:maxSdkVersion="32" />
 
     <!-- Bluetooth. minSdk is 29, so in principle this app could land on an API 29-30
@@ -89,4 +94,3 @@
     </application>
 
 </manifest>
- 
