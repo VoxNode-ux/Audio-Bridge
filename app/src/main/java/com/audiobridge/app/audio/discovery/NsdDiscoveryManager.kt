@@ -79,15 +79,13 @@ class NsdDiscoveryManager(private val context: Context) {
                 Log.e(TAG, "Unregistration failed: code=$errorCode")
             }
         }
-        registrationListener = listener
-        nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, listener)
-    }
+        discoveryListener = listener
+        nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
 
-    fun unregisterService() {
-        registrationListener?.let {
-            runCatching { nsdManager.unregisterService(it) }
+        awaitClose {
+            runCatching { nsdManager.stopServiceDiscovery(listener) }
+            discoveryListener = null
         }
-        registrationListener = null
     }
 
     /**
