@@ -346,18 +346,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * connection and record the peer's display name for the UI.
      */
     fun connectToWifiDirectPeer(peer: WifiDirectPeer) {
-        val wdManager = wifiDirectManager ?: return
-        viewModelScope.launch {
-            val result = wdManager.connectToPeer(peer)
-            if (result == null) {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Could not connect to ${peer.deviceName} over WiFi Direct."
-                )
-                return@launch
-            }
-            updateConfig(_uiState.value.config.copy(lastDeviceName = peer.deviceName))
-        }
+    val wdManager = wifiDirectManager ?: return
+    if (!hasWifiDirectDiscoveryPermission()) {
+        _uiState.value = _uiState.value.copy(
+            errorMessage = "WiFi Direct needs the nearby devices/location permission to connect."
+        )
+        return
     }
+    viewModelScope.launch {
+        val result = try {
+            wdManager.connectToPeer(peer)
+        } catch (e: SecurityException) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "WiFi Direct permission was revoked: ${e.message}"
+            )
+            return@launch
+        }
+        if (result == null) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Could not connect to ${peer.deviceName} over WiFi Direct."
+            )
+            return@launch
+        }
+        updateConfig(_uiState.value.config.copy(lastDeviceName = peer.deviceName))
+    }
+}
 
     fun stopDiscovery() {
         nsdDiscoveryJob?.cancel()
