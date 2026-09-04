@@ -70,7 +70,7 @@ data class WifiDirectConnectionResult(
 class WifiDirectManager(
     private val context: Context,
     private val manager: WifiP2pManager,
-    private val channel: WifiP2pManager.Channel
+    private val p2pChannel: WifiP2pManager.Channel
 ) {
 
     /** Must be called before discoverPeers() will do anything, and unregistered via
@@ -130,10 +130,10 @@ class WifiDirectManager(
         // Re-query whenever the OS broadcasts a peer-list change. A lightweight
         // polling fallback also runs in case the broadcast is delayed/missed on some
         // OEM skins — discoverPeers() itself is cheap to call repeatedly.
-        manager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
+        manager.discoverPeers(p2pChannel, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 Log.i(TAG, "Peer discovery started")
-                manager.requestPeers(channel, peerListListener)
+                manager.requestPeers(p2pChannel, peerListListener)
             }
             override fun onFailure(reasonCode: Int) {
                 Log.e(TAG, "Peer discovery failed: reason=$reasonCode")
@@ -150,13 +150,13 @@ class WifiDirectManager(
         val pollJob = launch(Dispatchers.IO) {
             while (isActive) {
                 delay(3000)
-                manager.requestPeers(channel, peerListListener)
+                manager.requestPeers(p2pChannel, peerListListener)
             }
         }
 
         awaitClose {
             pollJob.cancel()
-            runCatching { manager.stopPeerDiscovery(channel, null) }
+            runCatching { manager.stopPeerDiscovery(p2pChannel, null) }
         }
     }
 
@@ -174,12 +174,12 @@ class WifiDirectManager(
                 wps.setup = WpsInfo.PBC
             }
 
-            manager.connect(channel, config, object : WifiP2pManager.ActionListener {
+            manager.connect(p2pChannel, config, object : WifiP2pManager.ActionListener {
                 override fun onSuccess() {
                     // Negotiation succeeded; now fetch connection info for the actual
                     // Group Owner IP — connect() succeeding doesn't hand us the IP
                     // directly, a separate call is required.
-                    manager.requestConnectionInfo(channel) { info: WifiP2pInfo ->
+                    manager.requestConnectionInfo(p2pChannel) { info: WifiP2pInfo ->
                         if (!info.groupFormed) {
                             Log.e(TAG, "Connect reported success but no group was formed")
                             if (cont.isActive) cont.resumeWith(Result.success(null))
@@ -220,7 +220,7 @@ class WifiDirectManager(
         val filter = IntentFilter(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
-                manager.requestConnectionInfo(channel) { info: WifiP2pInfo ->
+                manager.requestConnectionInfo(p2pChannel) { info: WifiP2pInfo ->
                     if (info.groupFormed) {
                         val address = info.groupOwnerAddress?.hostAddress
                         if (address != null) {
@@ -310,7 +310,6 @@ class WifiDirectManager(
     }
 
     fun disconnect() {
-        runCatching { manager.removeGroup(channel, null) }
+        runCatching { manager.removeGroup(p2pChannel, null) }
     }
 }
-
