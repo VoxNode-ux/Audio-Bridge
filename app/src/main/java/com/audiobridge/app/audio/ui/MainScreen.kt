@@ -71,22 +71,11 @@ fun MainScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "AudioBridge",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                actions = {
-                    ConnectionStatusBadge(
-                        uiState.connectionState,
-                        Modifier.padding(end = 12.dp)
-                    )
-                }
+                title = { Text("AudioBridge", fontWeight = FontWeight.Bold) },
+                actions = { ConnectionStatusBadge(uiState.connectionState, Modifier.padding(end = 12.dp)) }
             )
         }
     ) { padding ->
-
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -94,29 +83,9 @@ fun MainScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            item {
-                RoleSection(
-                    uiState = uiState,
-                    onRoleChange = onRoleChange
-                )
-            }
-
-            item {
-                TransportSection(
-                    uiState = uiState,
-                    onTransportChange = onTransportChange,
-                    onProtocolChange = onProtocolChange
-                )
-            }
-
-            item {
-                PcmFormatSection(
-                    uiState = uiState,
-                    onPcmFormatChange = onPcmFormatChange
-                )
-            }
-
+            item { RoleSection(uiState, onRoleChange) }
+            item { TransportSection(uiState, onTransportChange, onProtocolChange) }
+            item { PcmFormatSection(uiState, onPcmFormatChange) }
             item {
                 DiscoverySection(
                     uiState = uiState,
@@ -126,36 +95,14 @@ fun MainScreen(
                     onSelectBluetoothDevice = onSelectBluetoothDevice
                 )
             }
-
             if (uiState.config.role == DeviceRole.RECEIVER) {
-                item {
-                    VolumeSection(
-                        uiState = uiState,
-                        onVolumeChange = onVolumeChange
-                    )
-                }
-
-                item {
-                    SafetyBufferSection(
-                        uiState = uiState,
-                        onSafetyBufferChange = onSafetyBufferChange
-                    )
-                }
+                item { VolumeSection(uiState, onVolumeChange) }
+                item { SafetyBufferSection(uiState, onSafetyBufferChange) }
             }
-
             if (uiState.connectionState == ConnectionState.STREAMING) {
-                item {
-                    StatsSection(uiState)
-                }
+                item { StatsSection(uiState) }
             }
-
-            item {
-                SettingsSection(
-                    uiState = uiState,
-                    onAutoReconnectChange = onAutoReconnectChange
-                )
-            }
-
+            item { SettingsSection(uiState, onAutoReconnectChange) }
             item {
                 StreamControlButton(
                     uiState = uiState,
@@ -163,59 +110,32 @@ fun MainScreen(
                     onStop = onStopStreaming
                 )
             }
-
-            item {
-                Spacer(Modifier.height(8.dp))
-            }
+            item { Spacer(Modifier.height(8.dp)) }
         }
     }
 }
 
 @Composable
-private fun SectionCard(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
+private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium
-            )
-
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
             content()
         }
     }
 }
 
 @Composable
-private fun RoleSection(
-    uiState: MainUiState,
-    onRoleChange: (DeviceRole) -> Unit
-) {
+private fun RoleSection(uiState: MainUiState, onRoleChange: (DeviceRole) -> Unit) {
     SectionCard(title = "This device is the…") {
         SegmentedSelector(
-            options = listOf(
-                DeviceRole.SENDER,
-                DeviceRole.RECEIVER
-            ),
+            options = listOf(DeviceRole.SENDER, DeviceRole.RECEIVER),
             selected = uiState.config.role,
-            labelFor = {
-                if (it == DeviceRole.SENDER) {
-                    "📱 Sender"
-                } else {
-                    "📻 Receiver"
-                }
-            },
+            labelFor = { if (it == DeviceRole.SENDER) "📱 Sender" else "📻 Receiver" },
             onSelect = onRoleChange
         )
     }
@@ -228,28 +148,23 @@ private fun TransportSection(
     onProtocolChange: (SocketProtocol) -> Unit
 ) {
     SectionCard(title = "Connection") {
-
         Text(
             "Link",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
         SegmentedSelector(
             options = TransportMedium.entries,
             selected = uiState.config.transport,
             labelFor = { it.label },
             onSelect = onTransportChange
         )
-
         Spacer(Modifier.height(4.dp))
-
         Text(
             "Protocol",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
         SegmentedSelector(
             options = SocketProtocol.entries,
             selected = uiState.config.protocol,
@@ -260,68 +175,43 @@ private fun TransportSection(
 }
 
 @Composable
-private fun PcmFormatSection(
-    uiState: MainUiState,
-    onPcmFormatChange: (PcmFormat) -> Unit
-) {
+private fun PcmFormatSection(uiState: MainUiState, onPcmFormatChange: (PcmFormat) -> Unit) {
     SectionCard(title = "Audio Quality (PCM)") {
-
         PcmFormat.entries.forEach { format ->
-
             val isSelected = format == uiState.config.pcmFormat
-
-            /*
-             * 32-bit / 48 kHz stereo is approximately 3.07 Mbps
-             * of raw PCM data. Bluetooth Classic RFCOMM is not a
-             * sensible transport for this bitrate, so don't allow
-             * the user to select it while Bluetooth is active.
-             */
-            val isBluetoothIncompatible =
-                format == PcmFormat.PCM_32_48 &&
-                    uiState.config.transport == TransportMedium.BLUETOOTH
-
+            // 32-bit/48kHz is ~3 Mbps uncompressed — beyond what Bluetooth Classic
+            // RFCOMM reliably sustains (~1-2 Mbps). Disable rather than silently allow
+            // a selection that will produce constant buffer underruns/audio breakup.
+            val isBluetoothIncompatible = format == PcmFormat.PCM_32_48 &&
+                uiState.config.transport == TransportMedium.BLUETOOTH
             Column {
-
                 ListItem(
-                    headlineContent = {
-                        Text(format.label)
-                    },
+                    headlineContent = { Text(format.label) },
                     supportingContent = {
                         Text(
-                            if (isBluetoothIncompatible) {
+                            if (isBluetoothIncompatible)
                                 "Too high bitrate for Bluetooth — pick a lower quality"
-                            } else {
+                            else
                                 "${format.bytesPerSecond() / 1024} KB/s uncompressed, stereo"
-                            }
                         )
                     },
                     trailingContent = {
                         if (isSelected) {
                             Icon(
-                                imageVector = Icons.Filled.CheckCircle,
+                                Icons.Filled.CheckCircle,
                                 contentDescription = "Selected",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                    }
                 )
-
                 if (!isSelected) {
                     OutlinedButton(
-                        onClick = {
-                            onPcmFormatChange(format)
-                        },
+                        onClick = { onPcmFormatChange(format) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isBluetoothIncompatible
                     ) {
-                        Text(
-                            if (isBluetoothIncompatible) {
-                                "Unavailable for Bluetooth"
-                            } else {
-                                "Use this format"
-                            }
-                        )
+                        Text("Use this format")
                     }
                 }
             }
@@ -338,46 +228,22 @@ private fun DiscoverySection(
     onSelectBluetoothDevice: (PairedBluetoothDevice) -> Unit
 ) {
     SectionCard(title = "Find Device") {
-
-        /*
-         * Show the last selected device at the top.
-         */
         if (uiState.config.lastDeviceName.isNotEmpty()) {
             ListItem(
-                headlineContent = {
-                    Text(uiState.config.lastDeviceName)
-                },
-                supportingContent = {
-                    Text(
-                        "${uiState.config.lastDeviceHost}:${uiState.config.lastDevicePort} · last used"
-                    )
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Filled.Wifi,
-                        contentDescription = null
-                    )
-                }
+                headlineContent = { Text(uiState.config.lastDeviceName) },
+                supportingContent = { Text("${uiState.config.lastDeviceHost}:${uiState.config.lastDevicePort} - last used") },
+                leadingContent = { Icon(Icons.Filled.Wifi, contentDescription = null) }
             )
         }
 
         when (uiState.config.transport) {
-
-            /*
-             * ---------------------------------------------------------
-             * BLUETOOTH
-             * ---------------------------------------------------------
-             */
             TransportMedium.BLUETOOTH -> {
-
                 Text(
-                    "Pair the two devices in Android Bluetooth settings first — " +
-                        "AudioBridge picks from devices already paired, " +
-                        "it doesn't scan for new ones.",
+                    "Pair the two devices in Android Bluetooth settings first - AudioBridge " +
+                        "picks from devices already paired, it doesn't scan for new ones.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
                 OutlinedButton(
                     onClick = onStartDiscovery,
                     modifier = Modifier.fillMaxWidth()
@@ -386,160 +252,78 @@ private fun DiscoverySection(
                 }
 
                 uiState.pairedBluetoothDevices.forEach { device ->
-
-                    val isSelected =
-                        device.address == uiState.selectedBluetoothDeviceAddress
-
+                    val isSelected = device.address == uiState.selectedBluetoothDeviceAddress
                     Column {
-
                         ListItem(
-                            headlineContent = {
-                                Text(device.name)
-                            },
-                            supportingContent = {
-                                Text(device.address)
-                            },
+                            headlineContent = { Text(device.name) },
+                            supportingContent = { Text(device.address) },
                             trailingContent = {
                                 if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Filled.CheckCircle,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
+                                    Icon(Icons.Filled.CheckCircle, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         )
-
                         OutlinedButton(
-                            onClick = {
-                                onSelectBluetoothDevice(device)
-                            },
+                            onClick = { onSelectBluetoothDevice(device) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Use ${device.name}")
                         }
                     }
                 }
-
                 if (uiState.pairedBluetoothDevices.isEmpty()) {
                     Text(
-                        "No paired devices found. Pair in Android Settings > Bluetooth, " +
-                            "then tap Refresh.",
+                        "No paired devices found. Pair in Android Settings > Bluetooth, then tap Refresh.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            /*
-             * ---------------------------------------------------------
-             * WI-FI DIRECT
-             * ---------------------------------------------------------
-             */
             TransportMedium.WIFI_DIRECT -> {
-
-                ScanButton(
-                    isDiscovering = uiState.isDiscovering,
-                    onStartDiscovery = onStartDiscovery
-                )
+                ScanButton(isDiscovering = uiState.isDiscovering, onStartDiscovery = onStartDiscovery)
 
                 uiState.wifiDirectPeers.forEach { peer ->
-
-                    /*
-                     * MainUiState does not contain a separate selected
-                     * Wi-Fi Direct address. The ViewModel stores the
-                     * selected peer's name in lastDeviceName, so use
-                     * that to display the checkmark.
-                     */
-                    val isSelected =
-                        peer.deviceName == uiState.config.lastDeviceName
-
                     Column {
-
                         ListItem(
-                            headlineContent = {
-                                Text(peer.deviceName)
-                            },
-                            supportingContent = {
-                                Text(peer.deviceAddress)
-                            },
-                            trailingContent = {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Filled.CheckCircle,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
+                            headlineContent = { Text(peer.deviceName) },
+                            supportingContent = { Text(peer.deviceAddress) }
                         )
-
                         OutlinedButton(
-                            onClick = {
-                                onSelectWifiDirectPeer(peer)
-                            },
+                            onClick = { onSelectWifiDirectPeer(peer) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Connect to ${peer.deviceName}")
                         }
                     }
                 }
-
-                if (
-                    !uiState.isDiscovering &&
-                    uiState.wifiDirectPeers.isEmpty()
-                ) {
+                if (!uiState.isDiscovering && uiState.wifiDirectPeers.isEmpty()) {
                     Text(
-                        "No WiFi Direct peers found yet. Make sure WiFi is on " +
-                            "and the other device has AudioBridge open, then scan.",
+                        "No WiFi Direct peers found yet. Make sure WiFi is on and the other device has AudioBridge open, then scan.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            /*
-             * ---------------------------------------------------------
-             * HOTSPOT / WI-FI
-             * ---------------------------------------------------------
-             */
             TransportMedium.HOTSPOT_WIFI -> {
-
-                ScanButton(
-                    isDiscovering = uiState.isDiscovering,
-                    onStartDiscovery = onStartDiscovery
-                )
+                ScanButton(isDiscovering = uiState.isDiscovering, onStartDiscovery = onStartDiscovery)
 
                 uiState.discoveredDevices.forEach { device ->
-
-                    val isSelected =
-                        device.host == uiState.config.lastDeviceHost &&
-                            device.port == uiState.config.lastDevicePort
-
+                    val isSelected = device.host == uiState.config.lastDeviceHost &&
+                        device.port == uiState.config.lastDevicePort
                     Column {
-
                         ListItem(
-                            headlineContent = {
-                                Text(device.name)
-                            },
-                            supportingContent = {
-                                Text("${device.host}:${device.port}")
-                            },
+                            headlineContent = { Text(device.name) },
+                            supportingContent = { Text("${device.host}:${device.port}") },
                             trailingContent = {
                                 if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Filled.CheckCircle,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
+                                    Icon(Icons.Filled.CheckCircle, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         )
-
                         OutlinedButton(
-                            onClick = {
-                                onSelectDevice(device)
-                            },
+                            onClick = { onSelectDevice(device) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Use ${device.name}")
@@ -547,14 +331,9 @@ private fun DiscoverySection(
                     }
                 }
 
-                if (
-                    !uiState.isDiscovering &&
-                    uiState.discoveredDevices.isEmpty() &&
-                    uiState.config.lastDeviceName.isEmpty()
-                ) {
+                if (!uiState.isDiscovering && uiState.discoveredDevices.isEmpty() && uiState.config.lastDeviceName.isEmpty()) {
                     Text(
-                        "No device found yet. Make sure both devices are on " +
-                            "the same hotspot, then scan.",
+                        "No device found yet. Make sure both devices are on the same hotspot, then scan.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -565,87 +344,51 @@ private fun DiscoverySection(
 }
 
 @Composable
-private fun ScanButton(
-    isDiscovering: Boolean,
-    onStartDiscovery: () -> Unit
-) {
+private fun ScanButton(isDiscovering: Boolean, onStartDiscovery: () -> Unit) {
     Button(
         onClick = onStartDiscovery,
         modifier = Modifier.fillMaxWidth(),
         enabled = !isDiscovering,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondary
-        )
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
     ) {
-
         if (isDiscovering) {
-
             CircularProgressIndicator(
-                modifier = Modifier
-                    .height(18.dp)
-                    .width(18.dp),
+                modifier = Modifier.height(18.dp).width(18.dp),
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.onSecondary
             )
-
             Spacer(Modifier.width(8.dp))
-
             Text("Searching…")
-
         } else {
-
-            Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = null
-            )
-
+            Icon(Icons.Filled.Search, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-
             Text("Scan for Device")
         }
     }
 }
 
 @Composable
-private fun VolumeSection(
-    uiState: MainUiState,
-    onVolumeChange: (Float) -> Unit
-) {
+private fun VolumeSection(uiState: MainUiState, onVolumeChange: (Float) -> Unit) {
     SectionCard(title = "Volume") {
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-
-            Icon(
-                imageVector = Icons.Filled.VolumeUp,
-                contentDescription = null
-            )
-
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Filled.VolumeUp, contentDescription = null)
             Slider(
                 value = uiState.config.volume,
                 onValueChange = onVolumeChange,
                 modifier = Modifier.weight(1f)
             )
-
-            Text(
-                "${(uiState.config.volume * 100).toInt()}%",
-                style = MaterialTheme.typography.labelLarge
-            )
+            Text("${(uiState.config.volume * 100).toInt()}%", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
 @Composable
-private fun SafetyBufferSection(
-    uiState: MainUiState,
-    onSafetyBufferChange: (Int) -> Unit
-) {
+private fun SafetyBufferSection(uiState: MainUiState, onSafetyBufferChange: (Int) -> Unit) {
+    // Range matches AudioPlaybackEngine.setSafetyBuffer()'s own coerceIn(20, 1000) —
+    // keeping the slider's bounds in sync with the engine's clamp avoids a slider that
+    // can show a value the engine would silently reject.
     val bufferMs = uiState.config.safetyBufferMs
-
     SectionCard(title = "Jitter Buffer") {
-
         Text(
             "How much audio to cushion against network jitter before playing it. " +
                 "Higher smooths a rougher connection but adds lag; lower stays in sync " +
@@ -653,68 +396,39 @@ private fun SafetyBufferSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Slider(
                 value = bufferMs.toFloat(),
-                onValueChange = {
-                    onSafetyBufferChange(it.toInt())
-                },
+                onValueChange = { onSafetyBufferChange(it.toInt()) },
                 valueRange = 20f..1000f,
                 modifier = Modifier.weight(1f)
             )
-
-            Text(
-                "$bufferMs ms",
-                style = MaterialTheme.typography.labelLarge
-            )
+            Text("${bufferMs} ms", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
 @Composable
-private fun StatsSection(
-    uiState: MainUiState
-) {
+private fun StatsSection(uiState: MainUiState) {
     SectionCard(title = "Live Stats") {
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
                 label = "Latency",
                 value = "${uiState.streamStats.latencyMs.toInt()} ms",
                 modifier = Modifier.weight(1f)
             )
-
             StatCard(
                 label = "Jitter",
                 value = "${uiState.streamStats.jitterMs.toInt()} ms",
                 modifier = Modifier.weight(1f)
             )
         }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-
-            /*
-             * The actual StreamStats class in this project has
-             * packetsReceived, not packetsSent.
-             */
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
                 label = "Packets Received",
                 value = "${uiState.streamStats.packetsReceived}",
                 modifier = Modifier.weight(1f)
             )
-
             StatCard(
                 label = "Packets Lost",
                 value = "${uiState.streamStats.packetsLost}",
@@ -725,36 +439,22 @@ private fun StatsSection(
 }
 
 @Composable
-private fun SettingsSection(
-    uiState: MainUiState,
-    onAutoReconnectChange: (Boolean) -> Unit
-) {
+private fun SettingsSection(uiState: MainUiState, onAutoReconnectChange: (Boolean) -> Unit) {
     SectionCard(title = "Settings") {
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Column {
-
-                Text(
-                    "Auto-reconnect",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-
+                Text("Auto-reconnect", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     "Reconnect to the last device automatically on launch",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Switch(
-                checked = uiState.autoReconnectEnabled,
-                onCheckedChange = onAutoReconnectChange
-            )
+            Switch(checked = uiState.autoReconnectEnabled, onCheckedChange = onAutoReconnectChange)
         }
     }
 }
@@ -765,67 +465,33 @@ private fun StreamControlButton(
     onStart: () -> Unit,
     onStop: () -> Unit
 ) {
-    val isActive =
-        uiState.connectionState == ConnectionState.STREAMING ||
-            uiState.connectionState == ConnectionState.CONNECTING
+    val isActive = uiState.connectionState == ConnectionState.STREAMING ||
+        uiState.connectionState == ConnectionState.CONNECTING
+    val canStart = uiState.config.lastDeviceHost.isNotEmpty() || uiState.config.role == DeviceRole.RECEIVER
+    val isSender = uiState.config.role == DeviceRole.SENDER
 
-    /*
-     * A sender needs a selected target.
-     * A receiver can start listening without knowing the
-     * sender's address beforehand.
-     */
-    val canStart =
-        uiState.config.lastDeviceHost.isNotEmpty() ||
-            uiState.config.role == DeviceRole.RECEIVER
-
-    val buttonText =
-        if (isActive) {
-            "Stop Streaming"
-        } else {
-            if (uiState.config.role == DeviceRole.SENDER) {
-                "Start Sending"
-            } else {
-                "Start Receiving"
-            }
-        }
+    val label = when {
+        isActive && isSender -> "Stop Sending"
+        isActive && !isSender -> "Stop Receiving"
+        !isActive && isSender -> "Start Sending"
+        else -> "Start Receiving"
+    }
 
     Button(
-        onClick = {
-            if (isActive) {
-                onStop()
-            } else {
-                onStart()
-            }
-        },
+        onClick = { if (isActive) onStop() else onStart() },
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp),
         enabled = canStart,
         colors = ButtonDefaults.buttonColors(
-            containerColor =
-                if (isActive) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.primary
-                }
+            containerColor = if (isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
-
-        Icon(
-            imageVector =
-                if (isActive) {
-                    Icons.Filled.Stop
-                } else {
-                    Icons.Filled.PlayArrow
-                },
-            contentDescription = null
-        )
-
+        Icon(if (isActive) Icons.Filled.Stop else Icons.Filled.PlayArrow, contentDescription = null)
         Spacer(Modifier.width(8.dp))
-
         Text(
-            text = buttonText,
+            text = label,
             style = MaterialTheme.typography.titleMedium
         )
     }
