@@ -135,7 +135,7 @@ private fun RoleSection(uiState: MainUiState, onRoleChange: (DeviceRole) -> Unit
         SegmentedSelector(
             options = listOf(DeviceRole.SENDER, DeviceRole.RECEIVER),
             selected = uiState.config.role,
-            labelFor = { if (it == DeviceRole.SENDER) "📱 Sender (Phone)" else "📻 Receiver (Tablet)" },
+            labelFor = { if (it == DeviceRole.SENDER) "📱 Sender" else "📻 Receiver" },
             onSelect = onRoleChange
         )
     }
