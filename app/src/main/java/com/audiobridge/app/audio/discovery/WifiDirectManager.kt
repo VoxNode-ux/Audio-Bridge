@@ -150,7 +150,12 @@ class WifiDirectManager(
         val pollJob = launch(Dispatchers.IO) {
             while (isActive) {
                 delay(3000)
-                manager.requestPeers(p2pChannel, peerListListener)
+                try {
+                    manager.requestPeers(p2pChannel, peerListListener)
+                } catch (e: SecurityException) {
+                    close(e)
+                    return@launch
+                }
             }
         }
 
@@ -313,4 +318,3 @@ class WifiDirectManager(
         runCatching { manager.removeGroup(p2pChannel, null) }
     }
 }
- 
