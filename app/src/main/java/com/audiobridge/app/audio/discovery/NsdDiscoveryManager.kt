@@ -151,10 +151,12 @@ class NsdDiscoveryManager(private val context: Context) {
             }
         }
         discoveryListener = listener
+        runCatching { multicastLock.acquire() }
         nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
 
         awaitClose {
             runCatching { nsdManager.stopServiceDiscovery(listener) }
+            runCatching { if (multicastLock.isHeld) multicastLock.release() }
             discoveryListener = null
         }
     }
