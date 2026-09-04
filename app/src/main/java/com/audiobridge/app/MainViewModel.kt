@@ -1,12 +1,12 @@
 package com.audiobridge.app
 
 import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.core.content.ContextCompat
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.wifi.p2p.WifiP2pManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.audiobridge.app.discovery.BluetoothPairedDevicesManager
@@ -53,10 +53,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val wifiP2pManager = application.getSystemService(Context.WIFI_P2P_SERVICE) as? WifiP2pManager
     private val wifiP2pChannel = wifiP2pManager?.initialize(application, application.mainLooper) {
-        // Channel died (Wi-Fi toggled off/on, or the system's P2P service restarted).
-        // WifiP2pManager offers no supported way to re-obtain a working channel after
-        // this fires without recreating the manager from scratch, so surface it rather
-        // than let WiFi Direct silently stop working with no explanation.
         _uiState.value = _uiState.value.copy(
             errorMessage = "WiFi Direct lost its connection to the system service — restart the app to use it again."
         )
@@ -69,12 +65,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var wifiDirectDiscoveryJob: Job? = null
     private var nsdDiscoveryJob: Job? = null
 
-    // Passive observer for Wi-Fi Direct connection state (see
-    // WifiDirectManager.observeConnectionInfo() doc comment) — reacts to a group
-    // forming regardless of which device tapped "Connect", and resolveWifiDirectHost
-    // performs the hello-packet handshake needed to learn the other device's real
-    // address when THIS device ends up as Group Owner (see WifiDirectManager for the
-    // full explanation of why that case needs special handling at all).
     private var wifiDirectConnectionObserverJob: Job? = null
     private var wifiDirectResolveJob: Job? = null
 
@@ -83,11 +73,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
-    // Counts config writes currently in flight to DataStore. While > 0, incoming
-    // emissions from prefsManager.configFlow are ignored in favor of the eagerly-set
-    // in-memory config below — otherwise a slightly-delayed emission for an OLDER
-    // write can arrive after a NEWER write already updated _uiState, momentarily
-    // reverting the user's latest change (visible as a UI flicker on rapid taps).
     private var pendingConfigWrites = 0
 
     init {
@@ -111,10 +96,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setTransport(transport: TransportMedium) {
         val current = _uiState.value.config
-        // 32-bit/48kHz PCM is ~3 Mbps uncompressed — well beyond what Bluetooth
-        // Classic RFCOMM reliably sustains (~1-2 Mbps, see BluetoothSenderTransport's
-        // own doc comment). Auto-fall back to a format that actually fits instead of
-        // silently letting the stream degrade into constant buffer underruns.
         val safeFormat = if (transport == TransportMedium.BLUETOOTH && current.pcmFormat == PcmFormat.PCM_32_48) {
             PcmFormat.PCM_16_48
         } else {
@@ -167,15 +148,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Begins discovery appropriate to the currently selected transport:
-     *  - HOTSPOT_WIFI: bidirectional mDNS, looking for a device advertising the
-     *    opposite role (unchanged from before).
-     *  - WIFI_DIRECT: WifiP2pManager peer discovery. There's no "role" concept in
-     *    raw P2P peer results the way mDNS service names carried one, so every
-     *    discovered peer is surfaced and the user picks manually.
-     *  - BLUETOOTH: no scan here; paired-device selection happens separately since
-     *    RFCOMM requires a pre-existing OS-level pairing, not a live scan.
-     */
     fun startDiscovery() {
         when (_uiState.value.config.transport) {
             TransportMedium.HOTSPOT_WIFI -> startNsdDiscovery()
@@ -193,9 +165,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = _uiState.value.copy(errorMessage = "Turn on Bluetooth to see paired devices.")
             return
         }
-        // getPairedDevices() is a direct, synchronous OS query (no scan/callback involved,
-        // since RFCOMM only works with devices already bonded) — no isDiscovering spinner
-        // needed, the list is just available immediately.
         _uiState.value = _uiState.value.copy(pairedBluetoothDevices = bluetoothManager.getPairedDevices())
     }
 
@@ -203,19 +172,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateConfig(
             _uiState.value.config.copy(
                 lastDeviceName = device.name,
-                lastDeviceHost = device.address, // reused as the address field for Bluetooth's sake
-                lastDevicePort = 0 // RFCOMM has no port concept; UUID-based channel instead
+                lastDeviceHost = device.address,
+                lastDevicePort = 0
             )
         )
         _uiState.value = _uiState.value.copy(selectedBluetoothDeviceAddress = device.address)
     }
 
     private fun startNsdDiscovery() {
-        // Tear down any previous discovery session before starting a new one — without
-        // this, repeated taps on "Scan" leak NsdManager listeners (each discoverServices()
-        // call registers a fresh listener, and stopDiscovery() only ever stops the most
-        // recently registered one, orphaning every earlier session) and pile up
-        // concurrent collector coroutines that never complete.
         nsdDiscoveryJob?.cancel()
         discoveryManager.stopDiscovery()
 
@@ -244,6 +208,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun hasWifiDirectDiscoveryPermission(): Boolean {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.NEARBY_WIFI_DEVICES
+        } else {
+            Manifest.permission.ACCESS_FINE_LOCATION
+        }
+        return ContextCompat.checkSelfPermission(getApplication(), permission) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+
     private fun startWifiDirectDiscovery() {
         val wdManager = wifiDirectManager
         if (wdManager == null) {
@@ -252,9 +226,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             return
         }
-        // Same leak pattern as NSD above: tear down any previous session (cancel its
-        // collector, unregister its BroadcastReceiver) before starting a new one, or
-        // repeated "Scan" taps accumulate orphaned receivers and polling jobs forever.
+        if (!hasWifiDirectDiscoveryPermission()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "WiFi Direct needs the nearby devices/location permission to scan for peers."
+            )
+            return
+        }
         wifiDirectDiscoveryJob?.cancel()
         unregisterWifiDirectReceiver?.invoke()
         unregisterWifiDirectReceiver = null
@@ -263,35 +240,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         unregisterWifiDirectReceiver = wdManager.registerReceiver()
 
         wifiDirectDiscoveryJob = viewModelScope.launch {
-            wdManager.discoverPeers()
-                .catch { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isDiscovering = false,
-                        errorMessage = "WiFi Direct discovery failed: ${e.message}"
-                    )
-                }
-                .collect { peers ->
-                    _uiState.value = _uiState.value.copy(wifiDirectPeers = peers)
-                }
+            try {
+                wdManager.discoverPeers()
+                    .catch { e ->
+                        _uiState.value = _uiState.value.copy(
+                            isDiscovering = false,
+                            errorMessage = "WiFi Direct discovery failed: ${e.message}"
+                        )
+                    }
+                    .collect { peers ->
+                        _uiState.value = _uiState.value.copy(wifiDirectPeers = peers)
+                    }
+            } catch (e: SecurityException) {
+                _uiState.value = _uiState.value.copy(
+                    isDiscovering = false,
+                    errorMessage = "WiFi Direct permission was revoked: ${e.message}"
+                )
+            }
         }
 
-        // Passive address-resolution observer — see startWifiDirectConnectionObserver's
-        // own doc comment for why this needs to run independently of connectToPeer().
         startWifiDirectConnectionObserver(wdManager)
     }
 
-    /**
-     * Runs for as long as WiFi Direct discovery is active. Reacts to a group forming
-     * on THIS device — whether because this device called connectToPeer() itself, or
-     * because the other device did and this one simply accepted the resulting
-     * invitation — and resolves the correct target host address for either outcome:
-     *
-     *  - We ended up Client: WifiP2pInfo already gave us the Owner's address
-     *    directly, so use it, and also announce ourselves so the Owner (if it's the
-     *    audio Sender) can learn OUR address the same way.
-     *  - We ended up Group Owner: WifiP2pInfo cannot tell us the Client's address —
-     *    wait for the Client's own hello packet instead (see WifiDirectManager).
-     */
     private fun startWifiDirectConnectionObserver(wdManager: WifiDirectManager) {
         wifiDirectConnectionObserverJob?.cancel()
         wifiDirectConnectionObserverJob = viewModelScope.launch {
@@ -336,40 +306,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    /**
-     * Connects to a WiFi Direct peer. The actual host/port resolution happens
-     * asynchronously via the passive observer started in startWifiDirectDiscovery()
-     * (see resolveWifiDirectHost) — that single code path handles BOTH group roles
-     * correctly, including the "we became Group Owner" case where WifiP2pInfo alone
-     * can't tell us the Client's IP, so this function only needs to kick off the
-     * connection and record the peer's display name for the UI.
-     */
     fun connectToWifiDirectPeer(peer: WifiDirectPeer) {
-    val wdManager = wifiDirectManager ?: return
-    if (!hasWifiDirectDiscoveryPermission()) {
-        _uiState.value = _uiState.value.copy(
-            errorMessage = "WiFi Direct needs the nearby devices/location permission to connect."
-        )
-        return
-    }
-    viewModelScope.launch {
-        val result = try {
-            wdManager.connectToPeer(peer)
-        } catch (e: SecurityException) {
+        val wdManager = wifiDirectManager ?: return
+        if (!hasWifiDirectDiscoveryPermission()) {
             _uiState.value = _uiState.value.copy(
-                errorMessage = "WiFi Direct permission was revoked: ${e.message}"
+                errorMessage = "WiFi Direct needs the nearby devices/location permission to connect."
             )
-            return@launch
+            return
         }
-        if (result == null) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Could not connect to ${peer.deviceName} over WiFi Direct."
-            )
-            return@launch
+        viewModelScope.launch {
+            val result = try {
+                wdManager.connectToPeer(peer)
+            } catch (e: SecurityException) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "WiFi Direct permission was revoked: ${e.message}"
+                )
+                return@launch
+            }
+            if (result == null) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Could not connect to ${peer.deviceName} over WiFi Direct."
+                )
+                return@launch
+            }
+            updateConfig(_uiState.value.config.copy(lastDeviceName = peer.deviceName))
         }
-        updateConfig(_uiState.value.config.copy(lastDeviceName = peer.deviceName))
     }
-}
 
     fun stopDiscovery() {
         nsdDiscoveryJob?.cancel()
@@ -423,4 +385,3 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
     }
 }
-
