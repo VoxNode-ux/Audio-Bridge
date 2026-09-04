@@ -202,6 +202,11 @@ class AudioStreamService : Service() {
 
         val mediaProjection: MediaProjection =
             mediaProjectionManager.getMediaProjection(resultCode, resultData)
+                ?: run {
+                    Log.e(TAG, "Failed to obtain MediaProjection — aborting send")
+                    _connectionState.value = ConnectionState.ERROR
+                    return
+                }
         activeMediaProjection = mediaProjection
 
         // Without this, the app has no way to learn that the user revoked capture
