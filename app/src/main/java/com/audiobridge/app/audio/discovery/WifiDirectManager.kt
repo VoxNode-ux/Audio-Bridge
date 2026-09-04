@@ -1,5 +1,6 @@
 package com.audiobridge.app.discovery
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -147,6 +148,7 @@ class WifiDirectManager(
         // `this` (the callbackFlow's own ProducerScope), not GlobalScope, so it's
         // structured under the flow's lifecycle and cancels automatically with it —
         // no separate job to leak if the collector goes away unexpectedly.
+        @SuppressLint("MissingPermission")
         val pollJob = launch(Dispatchers.IO) {
             while (isActive) {
                 delay(3000)
@@ -318,4 +320,3 @@ class WifiDirectManager(
         runCatching { manager.removeGroup(p2pChannel, null) }
     }
 }
- 
