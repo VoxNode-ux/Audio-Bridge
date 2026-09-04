@@ -131,16 +131,22 @@ class WifiDirectManager(
         // Re-query whenever the OS broadcasts a peer-list change. A lightweight
         // polling fallback also runs in case the broadcast is delayed/missed on some
         // OEM skins — discoverPeers() itself is cheap to call repeatedly.
-        manager.discoverPeers(p2pChannel, object : WifiP2pManager.ActionListener {
+        @SuppressLint("MissingPermission")
+        val discoverAction = object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 Log.i(TAG, "Peer discovery started")
-                manager.requestPeers(p2pChannel, peerListListener)
+                try {
+                    manager.requestPeers(p2pChannel, peerListListener)
+                } catch (e: SecurityException) {
+                    close(e)
+                }
             }
             override fun onFailure(reasonCode: Int) {
                 Log.e(TAG, "Peer discovery failed: reason=$reasonCode")
                 close(IllegalStateException("WiFi Direct discovery failed: $reasonCode"))
             }
-        })
+        }
+        manager.discoverPeers(p2pChannel, discoverAction)
 
         // Re-query whenever the OS broadcasts a peer-list change. A lightweight
         // polling fallback also runs in case the broadcast is delayed/missed on some
