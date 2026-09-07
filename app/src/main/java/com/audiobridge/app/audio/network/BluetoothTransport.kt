@@ -45,6 +45,7 @@ class BluetoothSenderTransport(
 
     private var socket: BluetoothSocket? = null
     private var out: DataOutputStream? = null
+    private var packetsSent = 0L
 
     @SuppressLint("MissingPermission")
     override suspend fun connect(): Boolean {
