@@ -256,7 +256,8 @@ class AudioStreamService : Service() {
 
                 try {
                     engine.start(format).collect { chunk ->
-                        transport.send(chunk.data, chunk.length)
+                        val sentCount = transport.send(chunk.data, chunk.length)
+                        _streamStats.value = _streamStats.value.copy(packetsSent = sentCount)
                     }
                     // engine.start()'s flow completing normally (not via exception) means
                     // the user called captureEngine.stop() — that's an intentional stop,
