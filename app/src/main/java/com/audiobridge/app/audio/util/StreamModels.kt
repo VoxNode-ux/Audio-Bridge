@@ -84,7 +84,8 @@ data class StreamStats(
     val jitterMs: Double = 0.0,
     val bitrateKbps: Double = 0.0,
     val packetsLost: Long = 0,
-    val packetsReceived: Long = 0
+    val packetsReceived: Long = 0,
+    val packetsSent: Long = 0
 )
 
 /** A discovered peer, found via mDNS in either direction. */
