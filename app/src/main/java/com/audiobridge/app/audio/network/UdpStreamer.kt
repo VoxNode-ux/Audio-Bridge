@@ -26,6 +26,7 @@ class UdpSender(private val targetHost: String, private val targetPort: Int = UD
 
     private val socket = DatagramSocket()
     private var sequenceNumber = 0
+    private var packetsSent = 0L
 
     // Resolved once (see resolveTarget()), not on every send() — InetAddress.getByName()
     // does real parsing/validation work (and can trigger an actual DNS lookup when
