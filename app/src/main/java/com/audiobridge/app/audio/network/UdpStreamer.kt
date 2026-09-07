@@ -57,14 +57,14 @@ class UdpSender(private val targetHost: String, private val targetPort: Int = UD
         }
     }
 
-    fun send(payload: ByteArray, length: Int) {
+    fun send(payload: ByteArray, length: Int): Long {
         // Falls back to a lazy one-off resolve if resolveTarget() was never called
         // (defensive — AudioTransport.connect() is expected to call it first via
         // UdpSenderTransport below, but send() shouldn't hard-fail just because a
         // caller skipped that step).
         val address = resolvedAddress ?: (runCatching { InetAddress.getByName(targetHost) }
             .onFailure { Log.e(TAG, "UDP send failed to resolve target: ${it.message}") }
-            .getOrNull() ?: return).also { resolvedAddress = it }
+            .getOrNull() ?: return packetsSent).also { resolvedAddress = it }
 
         headerScratch.clear()
         headerScratch.putInt(sequenceNumber++)
@@ -79,7 +79,9 @@ class UdpSender(private val targetHost: String, private val targetPort: Int = UD
 
         val packet = DatagramPacket(packetScratch, totalLength, address, targetPort)
         runCatching { socket.send(packet) }
+            .onSuccess { packetsSent++ }
             .onFailure { Log.e(TAG, "UDP send failed: ${it.message}") }
+        return packetsSent
     }
 
     fun close() {
