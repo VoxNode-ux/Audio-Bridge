@@ -87,13 +87,15 @@ class BluetoothSenderTransport(
         return method.invoke(device, 1) as BluetoothSocket
     }
 
-    override suspend fun send(data: ByteArray, length: Int) {
+    override suspend fun send(data: ByteArray, length: Int): Long {
         val compressed = PcmCompressor.compress(data, length, pcmBitDepth)
         out?.apply {
             writeInt(compressed.size)
             write(compressed, 0, compressed.size)
             flush()
         } ?: throw java.io.IOException("Bluetooth output stream not connected")
+        packetsSent++
+        return packetsSent
     }
 
     override fun listen(): Flow<TransportChunk> = flow {
