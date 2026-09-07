@@ -119,8 +119,9 @@ class BluetoothReceiverTransport(
 
     override suspend fun connect(): Boolean = true
 
-    override suspend fun send(data: ByteArray, length: Int) {
+    override suspend fun send(data: ByteArray, length: Int): Long {
         // Receiver never sends; audio flow in this app is one-directional (sender-only).
+        return 0
     }
 
     @SuppressLint("MissingPermission")
