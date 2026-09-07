@@ -410,6 +410,10 @@ private fun SafetyBufferSection(uiState: MainUiState, onSafetyBufferChange: (Int
 
 @Composable
 private fun StatsSection(uiState: MainUiState) {
+    val isSender = uiState.config.role == DeviceRole.SENDER
+    val packetsLabel = if (isSender) "Packets Sent" else "Packets Received"
+    val packetsValue = if (isSender) uiState.streamStats.packetsSent else uiState.streamStats.packetsReceived
+
     SectionCard(title = "Live Stats") {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
@@ -425,8 +429,8 @@ private fun StatsSection(uiState: MainUiState) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
-                label = "Packets Received",
-                value = "${uiState.streamStats.packetsReceived}",
+                label = packetsLabel,
+                value = "$packetsValue",
                 modifier = Modifier.weight(1f)
             )
             StatCard(
