@@ -245,7 +245,7 @@ class UdpReceiverTransport(
     private val receiver = UdpReceiver(listenPort)
 
     override suspend fun connect(): Boolean = true
-    override suspend fun send(data: ByteArray, length: Int) { /* receiver doesn't send */ }
+    override suspend fun send(data: ByteArray, length: Int): Long = 0 // receiver doesn't send
     override fun listen(): Flow<TransportChunk> =
         receiver.listen().map { chunk -> TransportChunk(chunk.data, chunk.length, chunk.stats) }
     override fun close() = receiver.stop()
