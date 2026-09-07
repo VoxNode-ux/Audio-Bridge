@@ -23,6 +23,7 @@ class TcpSender(private val targetHost: String, private val targetPort: Int = TC
 
     private var socket: Socket? = null
     private var out: DataOutputStream? = null
+    private var packetsSent = 0L
 
     fun connect(): Boolean {
         return try {
