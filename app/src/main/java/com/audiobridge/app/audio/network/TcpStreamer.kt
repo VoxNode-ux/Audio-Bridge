@@ -38,7 +38,7 @@ class TcpSender(private val targetHost: String, private val targetPort: Int = TC
         }
     }
 
-    fun send(payload: ByteArray, length: Int) {
+    fun send(payload: ByteArray, length: Int): Long {
         // Rethrow rather than swallow: TCP is connection-oriented, so a failed write
         // means the connection is genuinely dead (unlike UDP, where a single dropped
         // datagram is normal and shouldn't kill the stream). AudioStreamService's
@@ -50,6 +50,8 @@ class TcpSender(private val targetHost: String, private val targetPort: Int = TC
             write(payload, 0, length)
             flush()
         } ?: throw java.io.IOException("TCP output stream not connected")
+        packetsSent++
+        return packetsSent
     }
 
     fun close() {
