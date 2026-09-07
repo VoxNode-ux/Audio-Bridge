@@ -37,8 +37,11 @@ data class TransportChunk(
 
 interface AudioTransport : AutoCloseable {
     /** Sender side: push one chunk of raw PCM bytes out. Suspends only if the
-     *  underlying transport needs to (e.g. TCP backpressure); UDP returns fast. */
-    suspend fun send(data: ByteArray, length: Int)
+     *  underlying transport needs to (e.g. TCP backpressure); UDP returns fast.
+     *  Returns the running total of chunks sent so far on this transport, so the
+     *  caller (AudioStreamService's sending loop) can surface live "packets sent"
+     *  stats the same way the receiving side already does via TransportChunk.stats. */
+    suspend fun send(data: ByteArray, length: Int): Long
 
     /** Receiver side: opens the listening socket/channel and emits chunks as they
      *  arrive. Collecting this Flow is what actually starts listening — matches the
