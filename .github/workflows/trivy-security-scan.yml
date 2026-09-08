@@ -1,0 +1,36 @@
+name: Dependency Security Scan
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  schedule:
+    - cron: '30 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  vulnerability-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'          # Scans the project filesystem recursively
+          scan-ref: '.'           # Directs the tool to evaluate the root folder
+          format: 'sarif'         # Formats outputs into GitHub standard security tables
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH' # Flags only high-impact risks
+
+      - name: Upload Scan Findings to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+ 
