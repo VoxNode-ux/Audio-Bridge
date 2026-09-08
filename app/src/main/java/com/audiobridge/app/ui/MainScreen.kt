@@ -413,12 +413,25 @@ private fun StatsSection(uiState: MainUiState) {
     val isSender = uiState.config.role == DeviceRole.SENDER
     val packetsLabel = if (isSender) "Packets Sent" else "Packets Received"
     val packetsValue = if (isSender) uiState.streamStats.packetsSent else uiState.streamStats.packetsReceived
+    val quality = uiState.streamStats.quality
+    // Raw latencyMs is unreliable (unsynchronized clocks — see StreamStats doc
+    // comment) and was showing negative/near-zero values with no real meaning.
+    // Connection quality below is derived from jitter + loss instead, which don't
+    // require synchronized clocks to be meaningful.
+    val qualityColor = when (quality) {
+        com.audiobridge.app.util.ConnectionQuality.EXCELLENT -> MaterialTheme.colorScheme.primary
+        com.audiobridge.app.util.ConnectionQuality.GOOD -> MaterialTheme.colorScheme.primary
+        com.audiobridge.app.util.ConnectionQuality.FAIR -> MaterialTheme.colorScheme.tertiary
+        com.audiobridge.app.util.ConnectionQuality.POOR -> MaterialTheme.colorScheme.error
+        com.audiobridge.app.util.ConnectionQuality.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     SectionCard(title = "Live Stats") {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
-                label = "Latency",
-                value = "${uiState.streamStats.latencyMs.toInt()} ms",
+                label = "Connection",
+                value = quality.label,
+                valueColor = qualityColor,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
