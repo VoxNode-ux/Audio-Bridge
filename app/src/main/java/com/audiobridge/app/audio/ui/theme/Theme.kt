@@ -1,4 +1,4 @@
- package com.audiobridge.app.ui.theme
+package com.audiobridge.app.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -33,9 +33,6 @@ private val LightColors = lightColorScheme(
 @Composable
 fun AudioBridgeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color (Material You) is intentionally off by default — this app has a
-    // deliberate palette that communicates connection status consistently across
-    // your two very different devices/Android versions.
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -63,4 +60,4 @@ fun AudioBridgeTheme(
         content = content
     )
 }
-
+ 
