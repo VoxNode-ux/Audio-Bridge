@@ -71,7 +71,7 @@ android {
     }
 }
 
-// Replaces the old `kotlinOptions { jvmTarget = "21" }` DSL, which built-in Kotlin (AGP 9+)
+// Replaces the old `kotlinOptions { jvmTarget = "17" }` DSL (bumped 17 -> 21 here), which built-in Kotlin (AGP 9+)
 // no longer exposes on the `android {}` block — this is the new equivalent, applied via the
 // Kotlin plugin's own extension instead of AGP's.
 kotlin {
