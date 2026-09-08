@@ -10,18 +10,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # Required to write SARIF results back to GitHub's Security > Code Scanning alerts
   security-events: write
+  # Required to let the reusable workflow read the repository content
+  contents: read
 
 jobs:
-  scan:
-    name: OSV-Scanner
-    runs-index: ubuntu-latest
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4.2.2
-
-      - name: Run OSV-Scanner
-        uses: google/osv-scanner-action@v1
+  scan-repository:
+    # Leverages the official Google v2 full scan reusable workflow at the job level
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2
  
