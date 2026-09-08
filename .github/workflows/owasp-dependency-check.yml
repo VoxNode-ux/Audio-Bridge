@@ -1,62 +1,36 @@
-name: OWASP Dependency Check
+name: OSV Dependency Scan
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  schedule:
-    - cron: '30 4 * * 1'
-  workflow_dispatch:
+push:
+branches: [ main ]
+pull_request:
+branches: [ main ]
+schedule:
+- cron: '30 4 * * 1'
+workflow_dispatch:
 
 permissions:
-  contents: read
-  security-events: write
+contents: read
+security-events: write
 
 jobs:
-  dependency-check:
-    runs-on: ubuntu-latest
-    env:
-      JAVA_HOME: ''
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v7
+dependency-scan:
+runs-on: ubuntu-latest
 
-      - name: Setup Java
-        uses: actions/setup-java@v6
-        with:
-          distribution: 'temurin'
-          java-version: '21'
+steps:
+  - name: Checkout sources
+    uses: actions/checkout@v7
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+  - name: Run OSV-Scanner
+    uses: google/osv-scanner-action/osv-scanner-action@v2
+    with:
+      scan-args: |-
+        --recursive
+        .
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
-        env:
-          # actions/setup-java changes JAVA_HOME to the host's Java path, but this
-          # action runs inside its own Docker image with Java bundled at /opt/jdk —
-          # per the action's own README, JAVA_HOME must be reset to that in-container
-          # path, not emptied, or the container can't find its own bundled Java.
-          JAVA_HOME: /opt/jdk
-        with:
-          project: 'AudioBridge'
-          path: '.'
-          format: 'SARIF'
-          out: 'reports'
-
-      - name: Upload SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: reports/dependency-check-report.sarif
-
-      - name: Upload full report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: dependency-check-report
-          path: reports/
-          retention-days: 14
+  - name: Upload OSV SARIF to GitHub Security
+    if: always()
+    uses: github/codeql-action/upload-sarif@v4
+    with:
+      sarif_file: osv-results.sarif
+ 
