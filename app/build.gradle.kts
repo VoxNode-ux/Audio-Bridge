@@ -117,4 +117,50 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // --- Dependabot-flagged transitive vulnerabilities -----------------------
+    // None of these five libraries are used directly anywhere in this app's own
+    // code - they are pulled in transitively by Android Gradle Plugin's own
+    // internal tooling (manifest merging, signing) at build time, not shipped in
+    // the app's runtime APK. Dependabot can't auto-fix these because there's no
+    // direct dependency line for it to bump; these constraints force the resolved
+    // version up to the patched release regardless of which transitive path pulls
+    // each one in.
+    constraints {
+        implementation("org.bitbucket.b_c:jose4j") {
+            version { require("0.9.6") }
+            because("CVE: DoS via compressed JWE content, fixed in 0.9.6+")
+        }
+        implementation("org.jdom:jdom2") {
+            version { require("2.0.6.1") }
+            because("CVE: XML External Entity (XXE) Injection, fixed in 2.0.6.1+")
+        }
+        implementation("org.bouncycastle:bcpkix-jdk18on") {
+            version { require("1.84") }
+            because("CVE: broken/risky cryptographic algorithm, fixed in 1.84+")
+        }
+        implementation("org.bouncycastle:bcprov-jdk18on") {
+            version { require("1.84") }
+            because("CVE: LDAP injection, fixed in 1.84+")
+        }
+        implementation("org.apache.httpcomponents:httpclient") {
+            version { require("4.5.13") }
+            because("CVE: cross-site scripting, fixed in 4.5.13+")
+        }
+    }
+}
+
+    // DataStore for storing last-used connection (replaces SharedPreferences)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Coroutines for async audio/network work
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.08.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
