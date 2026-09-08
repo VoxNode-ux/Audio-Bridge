@@ -90,8 +90,13 @@ composeCompiler {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.19.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
-    implementation("androidx.activity:activity-compose:1.9.1")
+    
+    // Updated to stable 2.11.0
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    
+    // Updated to stable 1.13.0
+    implementation("androidx.activity:activity-compose:1.13.0")
 
     // Compose BOM keeps all Compose artifact versions in sync
     implementation(platform("androidx.compose:compose-bom:2026.08.00"))
@@ -101,15 +106,13 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Lifecycle-aware ViewModel for Compose
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
-
-    // DataStore for storing last-used connection (replaces SharedPreferences)
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    // Updated to stable 1.2.1
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
 
     // Coroutines for async audio/network work
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
+    // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
@@ -118,3 +121,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+ 
