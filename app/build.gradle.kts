@@ -1,17 +1,18 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
     namespace = "com.audiobridge.app"
-    // 36 = Android 16, matching the Moto Edge 70 sender's actual OS. When it updates to
-    // Android 17 in ~2 months, bump this again — targeting the platform version your
-    // primary device actually runs avoids the compatibility-behavior shims Android
-    // applies when targetSdk trails the running OS. The Lenovo Tab 9 (Android 13 /
-    // API 33, receiving no further OS updates) is unaffected by this number — it's
-    // covered by minSdk below regardless of how high targetSdk goes.
-    compileSdk = 36
+    // Bumped to 37 (from 36) alongside the AGP 9.4.0 upgrade — androidx.core:core-ktx
+    // 1.19.0 and the Compose 1.12.0 artifacts both hard-require compileSdk 37+ and
+    // AGP 9.1.0+ to compile at all (confirmed via a real CI failure: CheckAarMetadata
+    // rejected the build with "requires libraries and applications that depend on it
+    // to compile against version 37 or later"). AGP 8.10.0's own max recommended
+    // compileSdk was 36, so this bump only becomes safe/necessary together with the
+    // AGP 9 upgrade, not on its own.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.audiobridge.app"
@@ -20,7 +21,7 @@ android {
         // comfortably above this, and won't receive further OS updates — so 29 has margin
         // without being so low it drags in behavior for OS versions neither device runs.
         minSdk = 29
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
 
@@ -59,16 +60,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     packaging {
@@ -76,6 +69,23 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+// Replaces the old `kotlinOptions { jvmTarget = "17" }` DSL, which built-in Kotlin (AGP 9+)
+// no longer exposes on the `android {}` block — this is the new equivalent, applied via the
+// Kotlin plugin's own extension instead of AGP's.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+// Replaces the old composeOptions.kotlinCompilerExtensionVersion — that setting only ever
+// understood Kotlin-1.9-era Compose compiler artifact versions (like the previous "1.5.14")
+// and is ignored/invalid now that the Compose compiler ships version-matched to Kotlin
+// itself via the org.jetbrains.kotlin.plugin.compose plugin applied above.
+composeCompiler {
+    // No extra options needed — default settings are correct for this project.
 }
 
 dependencies {
@@ -108,4 +118,3 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
-
