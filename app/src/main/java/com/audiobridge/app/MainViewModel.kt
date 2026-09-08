@@ -91,6 +91,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setRole(role: DeviceRole) {
+        // Same reasoning as setTransport() above — switching roles mid-session can
+        // leave discovery/registration state pointed at the old role.
+        stopDiscovery()
+        unregisterSelf()
         updateConfig(_uiState.value.config.copy(role = role))
     }
 
