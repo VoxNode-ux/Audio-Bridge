@@ -1,5 +1,5 @@
 name: Dependency Security Scan
-
+ 
 on:
   push:
     branches: [ "main", "master" ]
