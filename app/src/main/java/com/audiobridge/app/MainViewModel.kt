@@ -95,6 +95,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setTransport(transport: TransportMedium) {
+        // Without this, switching transports mid-session (e.g. WiFi Direct -> Hotspot)
+        // left the OLD transport's discovery job, broadcast receiver, and connection
+        // observer all still running in the background — competing with whatever the
+        // newly-selected transport tries to start next. That's the most likely cause
+        // of "switched transports and now nothing detects" — stale WiFi Direct state
+        // was still holding onto the WifiP2pManager broadcast receiver and/or socket
+        // resources the new Hotspot/mDNS discovery then couldn't cleanly claim.
+        stopDiscovery()
+        unregisterSelf()
+
         val current = _uiState.value.config
         val safeFormat = if (transport == TransportMedium.BLUETOOTH && current.pcmFormat == PcmFormat.PCM_32_48) {
             PcmFormat.PCM_16_48
