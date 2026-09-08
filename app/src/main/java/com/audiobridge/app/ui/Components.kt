@@ -83,7 +83,8 @@ fun ConnectionStatusBadge(state: ConnectionState, modifier: Modifier = Modifier)
 fun StatCard(
     label: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    valueColor: androidx.compose.ui.graphics.Color? = null
 ) {
     Card(
         modifier = modifier,
@@ -102,7 +103,8 @@ fun StatCard(
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = valueColor ?: MaterialTheme.colorScheme.onSurface
             )
         }
     }
