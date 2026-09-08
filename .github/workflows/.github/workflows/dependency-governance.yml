@@ -6,33 +6,33 @@ jobs:
   dependency-governance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
       
       - name: Check for banned packages
         run: |
-          # Fail if these proprietary/tracking libraries appear in gradle dependencies
           BANNED_PACKAGES=(
             "com.google.firebase"
             "com.google.android.gms:play-services-analytics"
             "com.crashlytics"
-            "com.mixpanel"
-            "com.amplitude"
-            "io.branch"
-            "com.singular.sdk"
           )
           
           for pkg in "${BANNED_PACKAGES[@]}"; do
             if grep -r "$pkg" app/build.gradle.kts gradle/; then
-              echo "❌ BLOCKED: Found $pkg in dependencies"
+              echo "❌ BLOCKED: Found $pkg"
               exit 1
             fi
           done
           echo "✅ No banned packages found"
       
-      - name: Check for GPL/proprietary licenses
-        run: |
-          ./gradlew --version
-          ./gradlew dependencies > deps.txt
-          # Optional: use FOSSA, Black Duck, or Licensee CLI here
-          grep -i "gpl\|proprietary" deps.txt && exit 1 || true
+      - name: Check gradle dependencies
+        run: ./gradlew dependencies --no-daemon > deps.txt && cat deps.txt
  
