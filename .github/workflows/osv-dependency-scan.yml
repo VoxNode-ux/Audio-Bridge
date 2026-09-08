@@ -2,13 +2,9 @@ name: OSV-Scanner
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ "main", "master" ]
   pull_request:
-    branches:
-      - main
-      - master
+    branches: [ "main", "master" ]
   schedule:
     - cron: '30 0 * * *'
   workflow_dispatch:
@@ -18,10 +14,14 @@ permissions:
   security-events: write
 
 jobs:
-  scan-repository:
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2
-    with:
-      scan-args: |-
-        --recursive
-        ./
-  
+  scan:
+    name: OSV-Scanner
+    runs-index: ubuntu-latest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@7
+
+      - name: Run OSV-Scanner
+        uses: google/osv-scanner-action@v2
+ 
