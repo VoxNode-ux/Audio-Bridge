@@ -11,10 +11,11 @@ buildscript {
             }
 
             // 2. Patches Cryptographic Padding Flaws inside Bouncy Castle
-            classpath("org.bouncycastle:bcprov-jdk18on:1.85.2") {
+            // FIXED: Using version coordinates that exist simultaneously on Maven Central
+            classpath("org.bouncycastle:bcprov-jdk18on:1.85") {
                 because("Overrides legacy cryptographic provider layers used by lint engines")
             }
-            classpath("org.bouncycastle:bcpkix-jdk18on:1.85.2") {
+            classpath("org.bouncycastle:bcpkix-jdk18on:1.85") {
                 because("Overrides legacy public key infrastructure utilities inside toolchains")
             }
 
