@@ -15,6 +15,8 @@ permissions:
 jobs:
   dependency-check:
     runs-on: ubuntu-latest
+    env:
+      JAVA_HOME: ''
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
