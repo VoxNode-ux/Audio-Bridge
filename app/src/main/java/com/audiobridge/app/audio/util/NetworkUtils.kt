@@ -1,4 +1,4 @@
- package com.audiobridge.app.util
+package com.audiobridge.app.util
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -12,7 +12,7 @@ import java.net.Inet4Address
  * Resolves the other device's IP without relying on mDNS broadcast/discovery.
  *
  * When your Moto is a client on the Lenovo's hotspot (or the Wi-Fi Direct group
- * client), the Lenovo is the network's gateway — its IP is directly queryable from
+ * client), the Lenovo is the network's gateway - its IP is directly queryable from
  * DHCP/LinkProperties. This is a fallback path alongside NSD discovery, not a
  * replacement: mDNS still works fine on most hotspot setups, but some OEM hotspot
  * implementations block multicast, which silently breaks NSD with no clear error.
@@ -36,9 +36,6 @@ object NetworkUtils {
         val network: Network = cm.activeNetwork ?: return null
         val linkProperties: LinkProperties = cm.getLinkProperties(network) ?: return null
 
-        // routes() gives us the default route; its gateway is what we want. This works
-        // identically whether the active network is a hotspot client connection or a
-        // Wi-Fi Direct group-client connection.
         val defaultRoute = linkProperties.routes.firstOrNull { it.isDefaultRoute }
         val gateway = defaultRoute?.gateway
         return if (gateway is Inet4Address) gateway.hostAddress else null
@@ -52,7 +49,6 @@ object NetworkUtils {
             val dhcpInfo = wifiManager.dhcpInfo ?: return null
             val gatewayInt = dhcpInfo.gateway
             if (gatewayInt == 0) return null
-            // DhcpInfo.gateway is a little-endian packed int; unpack to dotted-quad.
             String.format(
                 "%d.%d.%d.%d",
                 gatewayInt and 0xff,
@@ -65,7 +61,6 @@ object NetworkUtils {
         }
     }
 
-    /** True if the active network is a Wi-Fi (hotspot or Wi-Fi Direct) connection. */
     fun isOnWifiNetwork(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             ?: return false
@@ -74,3 +69,4 @@ object NetworkUtils {
         return capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
     }
 }
+ 
