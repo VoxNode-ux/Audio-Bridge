@@ -78,15 +78,57 @@ enum class ConnectionState {
     ERROR
 }
 
+/**
+ * Qualitative connection health, derived from jitter and packet loss rather than
+ * the (fundamentally unreliable — see StreamStats.latencyMs doc comment) raw
+ * latency number. This is what the UI should show as the headline indicator.
+ */
+enum class ConnectionQuality(val label: String) {
+    EXCELLENT("Excellent"),
+    GOOD("Good"),
+    FAIR("Fair"),
+    POOR("Poor"),
+    UNKNOWN("—")
+}
+
 /** Live stats shown in the UI while streaming. */
 data class StreamStats(
+    // NOTE: this is NOT a reliable measure of real network latency. It's computed by
+    // comparing the sender's clock to the receiver's clock, and the two devices'
+    // clocks are never synchronized (no NTP/handshake exists in this codebase) — what
+    // this number actually reflects is clock DRIFT between the two devices since the
+    // stream started, which can easily read negative or hover near zero by pure
+    // coincidence. Kept around for debugging/curiosity, but the UI should prefer
+    // `quality` (derived from jitter + packet loss, which ARE meaningful without
+    // synchronized clocks) as the real-world connection health indicator.
     val latencyMs: Double = 0.0,
     val jitterMs: Double = 0.0,
     val bitrateKbps: Double = 0.0,
     val packetsLost: Long = 0,
     val packetsReceived: Long = 0,
     val packetsSent: Long = 0
-)
+) {
+    /**
+     * Derives a user-facing quality rating purely from jitter (consecutive-packet
+     * timing variance — meaningful without synchronized clocks, unlike latencyMs
+     * above) and loss rate. Thresholds are deliberately conservative for a local
+     * Wi-Fi/Bluetooth link at close range — real network latency doesn't factor in
+     * since it can't be measured reliably here.
+     */
+    val quality: ConnectionQuality
+        get() {
+            val totalExpected = packetsReceived + packetsLost
+            if (totalExpected <= 0) return ConnectionQuality.UNKNOWN
+            val lossRate = packetsLost.toDouble() / totalExpected
+
+            return when {
+                lossRate > 0.15 || jitterMs > 80.0 -> ConnectionQuality.POOR
+                lossRate > 0.05 || jitterMs > 40.0 -> ConnectionQuality.FAIR
+                lossRate > 0.01 || jitterMs > 15.0 -> ConnectionQuality.GOOD
+                else -> ConnectionQuality.EXCELLENT
+            }
+        }
+}
 
 /** A discovered peer, found via mDNS in either direction. */
 data class DiscoveredDevice(
