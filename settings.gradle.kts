@@ -11,6 +11,12 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
     }
+}
+
+// FIXED: Set this to match the folder structure exactly
+rootProject.name = "Audio-Stream"
+include(":app")
+
     // Force the safe version across all build configurations
     versionCatalogs {
         create("libs") {
