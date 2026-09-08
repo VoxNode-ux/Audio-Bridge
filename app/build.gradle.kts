@@ -122,3 +122,30 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
  
+// FORCE-FIX THE REMAINING 4 TRANSITIVE EXPOSURES IN THE APP MODULE
+configurations.all {
+    resolutionStrategy.eachDependency {
+        when (requested.group) {
+            "org.bouncycastle" -> {
+                // Forces stable 1.85 to clean the legacy 1.80.2 leaks
+                useVersion("1.85")
+                because("Fixes cryptographic vulnerabilities in both bcprov and bcpkix")
+            }
+            "org.apache.commons" -> {
+                if (requested.name == "commons-lang3") {
+                    // Forces stable 3.17.0 to clean the legacy 3.16.0 leaks
+                    useVersion("3.17.0")
+                    because("Fixes uncontrolled recursion denial of service vectors")
+                }
+            }
+            "org.apache.httpcomponents" -> {
+                if (requested.name == "httpclient") {
+                    // Forces stable 4.5.14 to clear legacy 4.5.6 leaks
+                    useVersion("4.5.14")
+                    because("Fixes memory exhaustion flaws in older network clients")
+                }
+            }
+        }
+    }
+}
+ 
