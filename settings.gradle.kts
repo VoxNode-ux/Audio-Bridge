@@ -13,26 +13,36 @@ dependencyResolutionManagement {
         mavenCentral()
     }
     
-    // FORCE-UPGRADE TRANSITIVE EXPOSURES GLOBALLY ACROSS ALL MODULES NATIVELY
-    versionCatalogs {
-        create("libs") {
-            // Self-contained declarations can go here if needed
+    // FIXED: Uses the globally supported allProjects block to safely inject resolution rules
+    allProjects {
+        configurations.all {
+            resolutionStrategy.eachDependency {
+                when (requested.group) {
+                    "org.bouncycastle" -> {
+                        useVersion("1.85")
+                        because("Fixes cryptographic vulnerabilities in both bcprov and bcpkix")
+                    }
+                    "org.apache.commons" -> {
+                        if (requested.name == "commons-lang3") {
+                            useVersion("3.18.0")
+                            because("Fixes uncontrolled recursion denial of service vectors")
+                        }
+                    }
+                    "org.apache.httpcomponents" -> {
+                        if (requested.name == "httpclient") {
+                            useVersion("4.5.14")
+                            because("Fixes memory exhaustion flaws in older network clients")
+                        }
+                    }
+                    "org.bitbucket.b_c" -> {
+                        if (requested.name == "jose4j") {
+                            useVersion("0.9.6")
+                            because("Fixes JSON Web Encryption decompression bomb vulnerabilities")
+                        }
+                    }
+                }
+            }
         }
-    }
-    
-    forcedModules {
-        // 1. Patches CVE-2026-5588 Cryptographic Provider Timing Attack Bypasses
-        force("org.bouncycastle:bcprov-jdk18on:1.85")
-        force("org.bouncycastle:bcpkix-jdk18on:1.85")
-        
-        // 2. Patches CVE-2025-48924 StackOverflow Uncontrolled Recursion DoS
-        force("org.apache.commons:commons-lang3:3.18.0")
-        
-        // 3. Patches CWE-772 Infrastructure Connection Pool Memory Socket Leaks
-        force("org.apache.httpcomponents:httpclient:4.5.14")
-        
-        // 4. Patches CVE-2024-29371 JSON Web Encryption Token Compression Bombs
-        force("org.bitbucket.b_c:jose4j:0.9.6")
     }
 }
 
