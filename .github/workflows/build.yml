@@ -29,12 +29,15 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      # FIXED: Added the :app: module prefix to point to the correct sub-module task
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew :app:testDebugUnitTest
 
+      # FIXED: Added the :app: module prefix to point to the correct sub-module task
       - name: Run Android Lint
-        run: ./gradlew lintDebug
+        run: ./gradlew :app:lintDebug
 
+      # FIXED: Points path target to the correct module build reports directory
       - name: Upload Lint results
         if: always()
         uses: actions/upload-artifact@v7
@@ -43,8 +46,9 @@ jobs:
           path: app/build/reports/lint-results-debug.html
           retention-days: 14
 
+      # FIXED: Added the :app: module prefix to build the app package target
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: ./gradlew :app:assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
@@ -52,3 +56,4 @@ jobs:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
+ 
