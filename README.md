@@ -202,7 +202,7 @@ AudioBridge requests only what each active feature needs — nothing is requeste
 
 ## Building from source
 
-**Requirements:** JDK 17, Android SDK (`compileSdk 36`, `minSdk 29`)
+**Requirements:** JDK 21, Android SDK (`compileSdk 36`, `minSdk 29`)
 
 ```bash
 git clone https://github.com/VoxNode-ux/Audio-Stream.git
