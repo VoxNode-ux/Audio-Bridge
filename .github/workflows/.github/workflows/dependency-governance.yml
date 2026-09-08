@@ -1,0 +1,38 @@
+name: Dependency Policy Check
+
+on: [push, pull_request]
+
+jobs:
+  dependency-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for banned packages
+        run: |
+          # Fail if these proprietary/tracking libraries appear in gradle dependencies
+          BANNED_PACKAGES=(
+            "com.google.firebase"
+            "com.google.android.gms:play-services-analytics"
+            "com.crashlytics"
+            "com.mixpanel"
+            "com.amplitude"
+            "io.branch"
+            "com.singular.sdk"
+          )
+          
+          for pkg in "${BANNED_PACKAGES[@]}"; do
+            if grep -r "$pkg" app/build.gradle.kts gradle/; then
+              echo "❌ BLOCKED: Found $pkg in dependencies"
+              exit 1
+            fi
+          done
+          echo "✅ No banned packages found"
+      
+      - name: Check for GPL/proprietary licenses
+        run: |
+          ./gradlew --version
+          ./gradlew dependencies > deps.txt
+          # Optional: use FOSSA, Black Duck, or Licensee CLI here
+          grep -i "gpl\|proprietary" deps.txt && exit 1 || true
+ 
