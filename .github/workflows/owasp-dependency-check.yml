@@ -36,7 +36,11 @@ jobs:
       - name: Run OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
         env:
-          JAVA_HOME: ''
+          # actions/setup-java changes JAVA_HOME to the host's Java path, but this
+          # action runs inside its own Docker image with Java bundled at /opt/jdk —
+          # per the action's own README, JAVA_HOME must be reset to that in-container
+          # path, not emptied, or the container can't find its own bundled Java.
+          JAVA_HOME: /opt/jdk
         with:
           project: 'AudioBridge'
           path: '.'
