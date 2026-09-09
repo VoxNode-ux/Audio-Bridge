@@ -274,7 +274,15 @@ class UdpSenderTransport(
     private val sender = UdpSender(targetHost, targetPort)
 
     override suspend fun connect(): Boolean =
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { sender.resolveTarget() }
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // resolveTarget() alone only checks the hostname/IP is parseable — it says
+            // nothing about whether the receiver is actually listening (see UdpSender's
+            // handshake() doc comment). Requiring a real handshake here means a sender
+            // that starts before the receiver taps "Start Receiving" now correctly
+            // fails connect() and falls into AudioStreamService's existing retry loop
+            // instead of silently streaming into a socket nobody had opened yet.
+            sender.resolveTarget() && sender.handshake()
+        }
 
     override suspend fun send(data: ByteArray, length: Int) = sender.send(data, length)
     override fun listen(): Flow<TransportChunk> = flow { /* sender doesn't listen */ }
