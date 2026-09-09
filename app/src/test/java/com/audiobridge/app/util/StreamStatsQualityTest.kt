@@ -31,8 +31,8 @@ class StreamStatsQualityTest {
     fun `small loss rate is good`() {
         val stats = StreamStats(
             jitterMs = 5.0,
-            packetsReceived = 980,
-            packetsLost = 5 // ~0.5% loss
+            packetsReceived = 970,
+            packetsLost = 15 // 15/985 = ~1.5% loss — just over the 1% GOOD threshold
         )
         assertEquals(ConnectionQuality.GOOD, stats.quality)
     }
