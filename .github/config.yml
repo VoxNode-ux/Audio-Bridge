@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/VoxNode-ux/Audio-Stream/security/advisories/new
+    about: Please report security vulnerabilities privately, not as a public issue — see SECURITY.md
+  - name: Question / Discussion
+    url: https://github.com/VoxNode-ux/Audio-Stream/discussions
+    about: For general questions or discussion, not a bug or feature request
