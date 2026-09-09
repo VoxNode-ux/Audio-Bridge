@@ -21,6 +21,8 @@ private const val TAG = "UdpStreamer"
  */
 private const val HEADER_SIZE = 8
 const val UDP_DEFAULT_PORT = 45778
+private const val HANDSHAKE_HELLO: Byte = 1
+private const val HANDSHAKE_ACK: Byte = 2
 
 class UdpSender(private val targetHost: String, private val targetPort: Int = UDP_DEFAULT_PORT) {
 
