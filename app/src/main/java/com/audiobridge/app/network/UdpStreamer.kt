@@ -165,6 +165,17 @@ class UdpReceiver(private val listenPort: Int = UDP_DEFAULT_PORT) {
                 continue
             }
 
+            if (packet.length == 1 && packet.data[packet.offset] == HANDSHAKE_HELLO) {
+                // Handshake probe from a sender confirming we're bound and ready
+                // (see UdpSender.handshake()) — reply with ACK and wait for the next
+                // packet. Not a real audio chunk, so skip the rest of this iteration.
+                runCatching {
+                    val ack = byteArrayOf(HANDSHAKE_ACK)
+                    sock.send(DatagramPacket(ack, ack.size, packet.address, packet.port))
+                }
+                continue
+            }
+
             if (packet.length < HEADER_SIZE) continue
 
             val bb = ByteBuffer.wrap(packet.data, packet.offset, HEADER_SIZE)
