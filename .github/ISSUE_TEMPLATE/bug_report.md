@@ -2,8 +2,9 @@
 name: Bug report
 about: Report something that isn't working correctly
 title: "[Bug] "
-labels: bug
+labels: bug, enhancement
 assignees: ''
+
 ---
 
 **Describe the bug**
