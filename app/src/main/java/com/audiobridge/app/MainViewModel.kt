@@ -151,7 +151,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updateConfig(newConfig: ConnectionConfig) {
+        // Config changes (transport, protocol, role) previously only updated UI state
+        // and preferences — they never touched an already-running AudioStreamService,
+        // which grabbed its transport/protocol instance once at Start and never
+        // rechecked it. Switching e.g. UDP -> TCP mid-stream silently left the OLD
+        // transport running while the UI relabeled itself, so nothing actually
+        // changed. Rather than block the change, we now flag it via
+        // pendingRestartConfig so MainActivity (which owns the AudioStreamService
+        // reference this ViewModel doesn't have) can cleanly restart the stream with
+        // the new settings. Receiver restarts silently; Sender can't (MediaProjection
+        // consent can't be re-triggered without user interaction) — MainActivity stops
+        // the sender stream and surfaces a message asking the user to tap Start again.
+        val isActive = _uiState.value.connectionState != com.audiobridge.app.util.ConnectionState.IDLE
+        val transportOrProtocolChanged = newConfig.transport != _uiState.value.config.transport ||
+            newConfig.protocol != _uiState.value.config.protocol
+
         _uiState.value = _uiState.value.copy(config = newConfig)
+
+        if (isActive && transportOrProtocolChanged) {
+            _pendingRestartConfig.value = newConfig
+        }
+
         pendingConfigWrites++
         viewModelScope.launch {
             try {
@@ -160,6 +180,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingConfigWrites--
             }
         }
+    }
+
+    private val _pendingRestartConfig = kotlinx.coroutines.flow.MutableStateFlow<ConnectionConfig?>(null)
+    /** MainActivity observes this to know when to restart an active stream after a
+     * mid-stream transport/protocol change — see updateConfig() above. */
+    val pendingRestartConfig: kotlinx.coroutines.flow.StateFlow<ConnectionConfig?> = _pendingRestartConfig
+
+    /** Called by MainActivity once it has actually acted on a pending restart. */
+    fun clearPendingRestart() {
+        _pendingRestartConfig.value = null
     }
 
     fun startDiscovery() {
