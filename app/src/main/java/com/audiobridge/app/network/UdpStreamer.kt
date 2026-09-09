@@ -143,6 +143,12 @@ class UdpReceiver(private val listenPort: Int = UDP_DEFAULT_PORT) {
 
     fun listen(): Flow<UdpReceivedChunk> = flow {
         val sock = DatagramSocket(listenPort).apply { soTimeout = 2000 }
+        // Answer handshake HELLO probes (see UdpSender.handshake()) for the first
+        // stretch of this loop by replying with ACK to whoever sent it — this lets a
+        // sender that started slightly before us confirm we're actually bound and
+        // ready, instead of silently streaming into a socket nobody had opened yet.
+        // Harmless to keep responding for the whole session; real audio packets are
+        // HEADER_SIZE(8)+ bytes and are distinguished from the 1-byte HELLO below.
         socket = sock
         isListening = true
 
