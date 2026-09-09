@@ -1,0 +1,25 @@
+# Normalize line endings for all text files, regardless of contributor OS
+* text=auto eol=lf
+
+# Explicit source types
+*.kt text
+*.kts text
+*.xml text
+*.md text
+*.yml text
+*.yaml text
+*.gradle text
+
+# Windows scripts keep CRLF (required to run correctly on Windows)
+*.bat text eol=crlf
+
+# Binary files — never diff/merge as text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.jks binary
+*.keystore binary
+
+# Don't count generated/vendored files in GitHub's language stats or diffs
+gradle/wrapper/gradle-wrapper.jar binary
+gradle/wrapper/gradle-wrapper.jar linguist-generated=true
