@@ -8,10 +8,10 @@
 
 [![Build](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/build.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/build.yml)
 [![CodeQL](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/codeql.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/codeql.yml)
-[![OWASP Dependency Check](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/owasp-dependency-check.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/owasp-dependency-check.yml)
+[![Trivy Security Scan](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/dependency-security-scan.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/dependency-security-scan.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android%2010%2B-3DDC84?logo=android&logoColor=white)](#requirements)
-[![Kotlin](https://img.shields.io/badge/Kotlin-1.9-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 
 </div>
 
@@ -136,22 +136,22 @@ AudioBridge is a single-module Android app built with Kotlin and Jetpack Compose
 
 ```mermaid
 flowchart TB
-    UI["🖼️ audio/ui<br/>Compose screens & components"]
+    UI["🖼️ ui/<br/>Compose screens & components"]
     VM["MainViewModel"]
     SVC["🔧 audio/AudioStreamService<br/>Foreground service — owns the stream lifecycle"]
 
-    subgraph Capture["Capture & Playback"]
+    subgraph Capture["audio/ — Capture & Playback"]
         CAP["AudioCaptureEngine<br/>MediaProjection"]
         PLAY["AudioPlaybackEngine<br/>AudioTrack + jitter buffer"]
     end
 
-    subgraph Net["🌐 audio/network — AudioTransport"]
+    subgraph Net["🌐 network/ — AudioTransport"]
         UDP["UdpStreamer"]
         TCP["TcpStreamer"]
         BT["BluetoothTransport"]
     end
 
-    subgraph Disc["🔍 audio/discovery"]
+    subgraph Disc["🔍 discovery/"]
         NSD["NsdDiscoveryManager<br/>mDNS"]
         WFD["WifiDirectManager<br/>WifiP2pManager"]
         BTP["BluetoothPairedDevicesManager"]
@@ -202,7 +202,7 @@ AudioBridge requests only what each active feature needs — nothing is requeste
 
 ## Building from source
 
-**Requirements:** JDK 21, Android SDK (`compileSdk 36`, `minSdk 29`)
+**Requirements:** JDK 21, Android SDK (`compileSdk 37`, `minSdk 29`)
 
 ```bash
 git clone https://github.com/VoxNode-ux/Audio-Stream.git
@@ -224,25 +224,29 @@ To run lint and unit tests locally, same as CI:
 app/src/main/java/com/audiobridge/app/
 ├── MainActivity.kt              # Entry point, permission requests
 ├── MainViewModel.kt             # UI state, orchestrates discovery & streaming
-└── audio/
-    ├── AudioCaptureEngine.kt    # MediaProjection-based system audio capture
-    ├── AudioPlaybackEngine.kt   # AudioTrack playback + jitter buffer
-    ├── AudioStreamService.kt    # Foreground service owning the stream lifecycle
-    ├── FixedFrameBuffer.kt      # Fixed-size PCM frame buffering
-    ├── PcmCompressor.kt         # PCM compression for bandwidth-constrained links
-    ├── discovery/
-    │   ├── NsdDiscoveryManager.kt              # mDNS discovery (Hotspot/Wi-Fi)
-    │   ├── WifiDirectManager.kt                # WifiP2pManager wrapper
-    │   └── BluetoothPairedDevicesManager.kt    # Paired-device lookup
-    ├── network/
-    │   ├── AudioTransport.kt    # Shared transport interface
-    │   ├── UdpStreamer.kt       # UDP sender/receiver
-    │   ├── TcpStreamer.kt       # TCP sender/receiver
-    │   └── BluetoothTransport.kt# RFCOMM sender/receiver
-    └── ui/
-        ├── MainScreen.kt        # Main Compose screen
-        ├── Components.kt        # Shared Compose components
-        └── theme/                # Material3 theme
+├── audio/
+│   ├── AudioCaptureEngine.kt    # MediaProjection-based system audio capture
+│   ├── AudioPlaybackEngine.kt   # AudioTrack playback + jitter buffer
+│   ├── AudioStreamService.kt    # Foreground service owning the stream lifecycle
+│   ├── FixedFrameBuffer.kt      # Fixed-size PCM frame buffering
+│   └── PcmCompressor.kt         # PCM compression for bandwidth-constrained links
+├── discovery/
+│   ├── NsdDiscoveryManager.kt              # mDNS discovery (Hotspot/Wi-Fi)
+│   ├── WifiDirectManager.kt                # WifiP2pManager wrapper
+│   └── BluetoothPairedDevicesManager.kt    # Paired-device lookup
+├── network/
+│   ├── AudioTransport.kt    # Shared transport interface
+│   ├── UdpStreamer.kt       # UDP sender/receiver
+│   ├── TcpStreamer.kt       # TCP sender/receiver
+│   └── BluetoothTransport.kt# RFCOMM sender/receiver
+├── ui/
+│   ├── MainScreen.kt        # Main Compose screen
+│   ├── Components.kt        # Shared Compose components
+│   └── theme/                # Material3 theme
+└── util/
+    ├── NetworkUtils.kt      # Network/IP helpers
+    ├── PreferencesManager.kt# DataStore-backed settings persistence
+    └── StreamModels.kt      # Shared data classes (StreamStats, config, etc.)
 ```
 
 ## CI / CD
@@ -253,7 +257,7 @@ Every push and pull request runs through:
 |---|---|
 | **Build** | `lintDebug`, `testDebugUnitTest`, `assembleDebug` — the app must lint clean and build successfully |
 | **CodeQL** | Static analysis for security vulnerabilities in the Kotlin/Java source |
-| **OWASP Dependency Check** | Scans all dependencies (including transitive ones) for known CVEs |
+| **Trivy Security Scan** | Scans all dependencies (including transitive ones) and the container/filesystem for known CVEs |
 | **Dependency Review** | Flags newly introduced vulnerable dependencies on pull requests |
 | **Dependency Submission** | Keeps GitHub's dependency graph accurate for Gradle's dynamic resolution |
 | **Secret Scanning** | Catches accidentally committed credentials |
