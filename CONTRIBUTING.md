@@ -24,7 +24,7 @@ fixes to new features.
 
 ## Development setup
 
-Requires JDK 17 and the Android SDK (`compileSdk 37`, `minSdk 29`).
+Requires JDK 21 and the Android SDK (`compileSdk 37`, `minSdk 29`).
 
 ```bash
 git clone https://github.com/VoxNode-ux/Audio-Stream.git
