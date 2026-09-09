@@ -43,6 +43,44 @@ class UdpSender(private val targetHost: String, private val targetPort: Int = UD
         }
     }
 
+    /**
+     * Confirms the receiver's socket is actually bound and listening before the real
+     * stream starts. Without this, resolveTarget() succeeding (a bare DNS/IP parse)
+     * was being treated as "connected" — but UDP has no handshake of its own, so if
+     * the receiver's DatagramSocket(listenPort) hadn't been created yet (it only binds
+     * when the receiver's listen() Flow starts collecting, i.e. the moment the user
+     * taps Start Receiving — see UdpReceiver.listen() below), every packet sent before
+     * that point was silently dropped with no error on either side. This is the most
+     * likely cause of "sender starts before receiver is ready -> nothing happens."
+     *
+     * Sends a 1-byte HELLO probe and waits briefly for the receiver's matching
+     * HELLO_ACK (see UdpReceiver below) on this same socket, retrying a few times
+     * within a short window rather than failing after a single attempt — the receiver
+     * may bind its socket a few hundred ms after the sender starts probing.
+     */
+    fun handshake(timeoutMsPerAttempt: Int = 400, attempts: Int = 5): Boolean {
+        val address = resolvedAddress ?: return false
+        val originalTimeout = runCatching { socket.soTimeout }.getOrDefault(0)
+        return try {
+            socket.soTimeout = timeoutMsPerAttempt
+            val hello = byteArrayOf(HANDSHAKE_HELLO)
+            val ackBuf = ByteArray(1)
+            repeat(attempts) {
+                runCatching {
+                    socket.send(DatagramPacket(hello, hello.size, address, targetPort))
+                    val ackPacket = DatagramPacket(ackBuf, ackBuf.size)
+                    socket.receive(ackPacket)
+                    if (ackPacket.length == 1 && ackBuf[0] == HANDSHAKE_ACK) {
+                        return true
+                    }
+                }
+            }
+            false
+        } finally {
+            runCatching { socket.soTimeout = originalTimeout }
+        }
+    }
+
     fun send(payload: ByteArray, length: Int): Long {
         val address = resolvedAddress ?: (runCatching { InetAddress.getByName(targetHost) }
             .onFailure { Log.e(TAG, "UDP send failed to resolve target: ${it.message}") }
