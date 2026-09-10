@@ -24,7 +24,7 @@ buildscript {
             }
 
             // 4. Patches Connection Pool Socket Leak Exhaustion parameters in tools
-            classpath("org.apache.httpcomponents:httpclient:5.6.3") {
+            classpath("org.apache.httpcomponents:httpclient:4.5.6") {
                 because("Forces a secure legacy network runtime for fallback resource fetches")
             }
 
@@ -58,7 +58,7 @@ subprojects {
                 }
                 "org.apache.httpcomponents" -> {
                     if (requested.name == "httpclient") {
-                        useVersion("5.6.3")
+                        useVersion("4.5.6")
                         because("Fixes memory exhaustion flaws in older network clients")
                     }
                 }
