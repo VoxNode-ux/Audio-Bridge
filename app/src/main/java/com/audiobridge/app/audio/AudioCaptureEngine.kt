@@ -135,7 +135,7 @@ class AudioCaptureEngine(private val mediaProjection: MediaProjection) {
             // side (AudioPlaybackEngine) reverses this exact marshaling before
             // calling AudioTrack's own float[] write overload, which has the
             // identical byte[]-rejection restriction.
-            val floatChunk = FloatArray(minBufferSize / 4)
+            val floatChunk = FloatArray(bufferSize / 4)
             val byteChunk = ByteArray(floatChunk.size * 4)
             val byteView = ByteBuffer.wrap(byteChunk).order(ByteOrder.LITTLE_ENDIAN)
             try {
