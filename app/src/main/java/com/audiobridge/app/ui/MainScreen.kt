@@ -36,6 +36,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +54,7 @@ import com.audiobridge.app.util.DiscoveredDevice
 import com.audiobridge.app.util.PcmFormat
 import com.audiobridge.app.util.SocketProtocol
 import com.audiobridge.app.util.TransportMedium
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -413,19 +419,7 @@ private fun StatsSection(uiState: MainUiState) {
     val isSender = uiState.config.role == DeviceRole.SENDER
     val packetsLabel = if (isSender) "Packets Sent" else "Packets Received"
     val packetsValue = if (isSender) uiState.streamStats.packetsSent else uiState.streamStats.packetsReceived
-    // Even with jitterMs already averaged over ~20 packets (see UdpStreamer), stats
-    // emit on every incoming packet — multiple times per second — so the displayed
-    // quality label was recomputing and visibly flickering between adjacent tiers
-    // (e.g. Fair/Good) at that same rate. Debouncing the DISPLAYED value to update
-    // at most a few times a second smooths this out without touching the underlying
-    // jitter/loss math, which is already reasonably stable.
-    var displayedQuality by remember { mutableStateOf(uiState.streamStats.quality) }
-    val latestQuality = uiState.streamStats.quality
-    LaunchedEffect(latestQuality) {
-        kotlinx.coroutines.delay(600)
-        displayedQuality = latestQuality
-    }
-    val quality = displayedQuality
+    val quality = uiState.streamStats.quality
     // Raw latencyMs is unreliable (unsynchronized clocks — see StreamStats doc
     // comment) and was showing negative/near-zero values with no real meaning.
     // Connection quality below is derived from jitter + loss instead, which don't
@@ -438,11 +432,24 @@ private fun StatsSection(uiState: MainUiState) {
         com.audiobridge.app.util.ConnectionQuality.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
+    // Even with jitterMs already averaged over ~20 packets (see UdpStreamer), stats
+    // emit on every incoming packet — multiple times per second — so the displayed
+    // quality label was recomputing and visibly flickering between adjacent tiers
+    // (e.g. Fair/Good) at that same rate. Debouncing the DISPLAYED value to update
+    // at most a few times a second smooths this out without touching the underlying
+    // jitter/loss math, which is already reasonably stable.
+    var displayedQuality by remember { mutableStateOf(uiState.streamStats.quality) }
+    val latestQuality = uiState.streamStats.quality
+    LaunchedEffect(latestQuality) {
+        delay(600)
+        displayedQuality = latestQuality
+    }
+
     SectionCard(title = "Live Stats") {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             StatCard(
                 label = "Connection",
-                value = quality.label,
+                value = displayedQuality.label,
                 valueColor = qualityColor,
                 modifier = Modifier.weight(1f)
             )
@@ -525,3 +532,4 @@ private fun StreamControlButton(
         )
     }
 }
+ 
