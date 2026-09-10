@@ -1,4 +1,4 @@
-Package com.audiobridge.app
+package com.audiobridge.app
 
 import android.Manifest
 import android.app.Application
