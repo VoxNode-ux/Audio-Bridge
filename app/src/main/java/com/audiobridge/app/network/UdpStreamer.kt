@@ -60,7 +60,7 @@ class UdpSender(private val targetHost: String, private val targetPort: Int = UD
      * within a short window rather than failing after a single attempt — the receiver
      * may bind its socket a few hundred ms after the sender starts probing.
      */
-    fun handshake(timeoutMsPerAttempt: Int = 400, attempts: Int = 5): Boolean {
+    fun handshake(timeoutMsPerAttempt: Int = 300, attempts: Int = 3): Boolean {
         val address = resolvedAddress ?: return false
         val originalTimeout = runCatching { socket.soTimeout }.getOrDefault(0)
         return try {
