@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
                     onRoleChange = viewModel::setRole,
                     onTransportChange = viewModel::setTransport,
                     onProtocolChange = viewModel::setProtocol,
+                    onHardReset = ::handleHardReset,
                     onPcmFormatChange = viewModel::setPcmFormat,
                     onVolumeChange = { volume ->
                         viewModel.setVolume(volume)
