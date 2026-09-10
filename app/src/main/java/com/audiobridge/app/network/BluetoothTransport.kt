@@ -28,6 +28,23 @@ private const val SDP_SERVICE_NAME = "AudioBridgeStream"
 // full underlying OS timeout (up to ~12s) with no visible feedback to the user.
 private const val CONNECT_TIMEOUT_MS = 6000L
 
+// 4-byte magic marker prefixed before every frame's [sequence][length] header.
+// RFCOMM is a byte stream with no inherent framing - if even a single byte is
+// ever corrupted, dropped, or duplicated in transit (which does happen on
+// Bluetooth Classic, including at very close range where two radios can
+// self-saturate each other), a plain length-prefixed protocol has no way to
+// tell "this is a real frame length" from "this is garbage left over from a
+// desync" - it just reads whatever bytes are next as if they were a valid
+// header, which either kills the whole connection outright or, worse, reads
+// the wrong number of bytes into Inflater and produces audible garbage that
+// keeps compounding on every subsequent frame because the stream never
+// recovers alignment. Scanning forward for this marker after any suspicious
+// frame lets the receiver resynchronize to the next real frame boundary
+// instead of tearing down the whole connection or decoding corrupted data.
+private val FRAME_MAGIC = byteArrayOf(0xAB.toByte(), 0xCD.toByte(), 0xEF.toByte(), 0x01)
+private const val MAX_FRAME_BYTES = 1_000_000
+private const val MAX_RESYNC_SCAN_BYTES = 65_536
+
 /**
  * RFCOMM Bluetooth Classic transport. Standard Bluetooth tops out around 1-2 Mbps,
  * which is comfortably under what 16-bit/44.1kHz stereo needs (~1.4 Mbps) but leaves
@@ -46,10 +63,11 @@ class BluetoothSenderTransport(
     private var socket: BluetoothSocket? = null
     private var out: DataOutputStream? = null
     private var packetsSent = 0L
+    private var sequenceNumber = 0
 
     @SuppressLint("MissingPermission")
     override suspend fun connect(): Boolean {
-        adapter.cancelDiscovery() // discovery in progress slows the connect handshake
+        adapter.cancelDiscovery()
 
         val connected = withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
             attemptConnect { targetDevice.createRfcommSocketToServiceRecord(AUDIOBRIDGE_UUID) }
@@ -62,6 +80,7 @@ class BluetoothSenderTransport(
         return if (connected != null) {
             socket = connected
             out = DataOutputStream(connected.outputStream)
+            sequenceNumber = 0
             true
         } else {
             Log.e(TAG, "Bluetooth connect failed after standard + fallback attempts")
@@ -90,6 +109,8 @@ class BluetoothSenderTransport(
     override suspend fun send(data: ByteArray, length: Int): Long {
         val compressed = PcmCompressor.compress(data, length, pcmBitDepth)
         out?.apply {
+            write(FRAME_MAGIC)
+            writeInt(sequenceNumber++)
             writeInt(compressed.size)
             write(compressed, 0, compressed.size)
             flush()
@@ -124,6 +145,33 @@ class BluetoothReceiverTransport(
         return 0
     }
 
+    /**
+     * Scans forward byte-by-byte on the input stream until it finds FRAME_MAGIC,
+     * discarding everything before it. Called whenever the stream's framing is
+     * suspect (a bogus length, a decompress failure) instead of tearing down the
+     * whole connection - RFCOMM guarantees in-order, at-most-corrupted bytes, not
+     * that this app's own framing stays aligned after a glitch, so resyncing to
+     * the next known-good marker is what actually recovers a session instead of
+     * reconnecting (which drops far more audio than a brief resync scan does).
+     * Returns false if no marker is found within the scan cap, meaning the link
+     * is bad enough that reconnecting is the better move.
+     */
+    private fun resyncToNextFrame(input: DataInputStream): Boolean {
+        var matched = 0
+        var scanned = 0
+        while (scanned < MAX_RESYNC_SCAN_BYTES) {
+            val b = input.readUnsignedByte()
+            scanned++
+            if (b.toByte() == FRAME_MAGIC[matched]) {
+                matched++
+                if (matched == FRAME_MAGIC.size) return true
+            } else {
+                matched = if (b.toByte() == FRAME_MAGIC[0]) 1 else 0
+            }
+        }
+        return false
+    }
+
     @SuppressLint("MissingPermission")
     override fun listen(): Flow<TransportChunk> = flow {
         val server = adapter.listenUsingRfcommWithServiceRecord(SDP_SERVICE_NAME, AUDIOBRIDGE_UUID)
@@ -137,20 +185,58 @@ class BluetoothReceiverTransport(
 
         val input = DataInputStream(client.inputStream)
         var packetsReceived = 0L
+        var packetsLost = 0L
+        var highestSeqSeen = -1
+        var hasReceivedFirst = false
         val arrivalTimes = ArrayDeque<Long>(20)
+        val magicBuf = ByteArray(FRAME_MAGIC.size)
 
         try {
             while (isListening) {
-                val compressedLength = input.readInt()
-                if (compressedLength <= 0 || compressedLength > 1_000_000) {
-                    Log.e(TAG, "Suspicious frame length $compressedLength, dropping connection")
-                    break
+                input.readFully(magicBuf)
+                if (!magicBuf.contentEquals(FRAME_MAGIC)) {
+                    Log.w(TAG, "Frame magic mismatch, resyncing")
+                    if (!resyncToNextFrame(input)) {
+                        Log.e(TAG, "Resync scan exhausted without finding a frame, dropping connection")
+                        break
+                    }
                 }
+
+                val seq = input.readInt()
+                val compressedLength = input.readInt()
+                if (compressedLength <= 0 || compressedLength > MAX_FRAME_BYTES) {
+                    Log.w(TAG, "Suspicious frame length $compressedLength after valid magic, resyncing")
+                    if (!resyncToNextFrame(input)) {
+                        Log.e(TAG, "Resync scan exhausted without finding a frame, dropping connection")
+                        break
+                    }
+                    continue
+                }
+
                 val compressed = ByteArray(compressedLength)
                 input.readFully(compressed)
-                val payload = PcmCompressor.decompress(compressed, pcmBitDepth)
+
+                val payload = try {
+                    PcmCompressor.decompress(compressed, pcmBitDepth)
+                } catch (e: Exception) {
+                    // A corrupted frame that still passed the length sanity check -
+                    // count it as lost and keep the connection alive rather than
+                    // letting Inflater's exception tear the whole session down.
+                    Log.w(TAG, "Frame $seq failed to decompress, treating as lost: ${e.message}")
+                    packetsLost++
+                    continue
+                }
 
                 packetsReceived++
+                if (!hasReceivedFirst) {
+                    hasReceivedFirst = true
+                    highestSeqSeen = seq
+                } else if (seq > highestSeqSeen) {
+                    val gap = seq - highestSeqSeen - 1
+                    if (gap > 0) packetsLost += gap
+                    highestSeqSeen = seq
+                }
+
                 val now = System.currentTimeMillis()
                 if (arrivalTimes.size >= 20) arrivalTimes.removeFirst()
                 arrivalTimes.addLast(now)
@@ -165,7 +251,7 @@ class BluetoothReceiverTransport(
                         stats = StreamStats(
                             latencyMs = 0.0,
                             jitterMs = jitter,
-                            packetsLost = 0,
+                            packetsLost = packetsLost,
                             packetsReceived = packetsReceived
                         )
                     )
