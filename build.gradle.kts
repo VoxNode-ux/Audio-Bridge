@@ -11,20 +11,20 @@ buildscript {
             }
 
             // 2. Patches Cryptographic Padding Timing Vulnerabilities inside build tool processes
-            classpath("org.bouncycastle:bcprov-jdk18on:1.85") {
+            classpath("org.bouncycastle:bcprov-jdk18on:1.85.2") {
                 because("Overrides legacy cryptographic provider layers used by lint engines")
             }
-            classpath("org.bouncycastle:bcpkix-jdk18on:1.85") {
+            classpath("org.bouncycastle:bcpkix-jdk18on:1.85.2") {
                 because("Overrides legacy public key infrastructure utilities inside toolchains")
             }
 
             // 3. Patches CVE-2025-48924 Uncontrolled Recursion Denial of Service Flaw in tools
-            classpath("org.apache.commons:commons-lang3:3.18.0") {
+            classpath("org.apache.commons:commons-lang3:3.20.0") {
                 because("Overrides vulnerable string formatting libraries bundled by build scripts")
             }
 
             // 4. Patches Connection Pool Socket Leak Exhaustion parameters in tools
-            classpath("org.apache.httpcomponents:httpclient:4.5.14") {
+            classpath("org.apache.httpcomponents:httpclient:5.6.3") {
                 because("Forces a secure legacy network runtime for fallback resource fetches")
             }
 
@@ -47,18 +47,18 @@ subprojects {
         resolutionStrategy.eachDependency {
             when (requested.group) {
                 "org.bouncycastle" -> {
-                    useVersion("1.85")
+                    useVersion("1.85.2")
                     because("Fixes cryptographic vulnerabilities inside sub-module dependencies")
                 }
                 "org.apache.commons" -> {
                     if (requested.name == "commons-lang3") {
-                        useVersion("3.18.0")
+                        useVersion("3.20.0")
                         because("Fixes uncontrolled recursion denial of service vectors")
                     }
                 }
                 "org.apache.httpcomponents" -> {
                     if (requested.name == "httpclient") {
-                        useVersion("4.5.14")
+                        useVersion("5.6.3")
                         because("Fixes memory exhaustion flaws in older network clients")
                     }
                 }
