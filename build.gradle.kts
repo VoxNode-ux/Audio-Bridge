@@ -11,10 +11,10 @@ buildscript {
             }
 
             // 2. Patches Cryptographic Padding Timing Vulnerabilities inside build tool processes
-            classpath("org.bouncycastle:bcprov-jdk18on:1.85.0") {
+            classpath("org.bouncycastle:bcprov-jdk18on:1.85.2") {
                 because("Overrides legacy cryptographic provider layers used by lint engines")
             }
-            classpath("org.bouncycastle:bcpkix-jdk18on:1.85.0") {
+            classpath("org.bouncycastle:bcpkix-jdk18on:1.85.2") {
                 because("Overrides legacy public key infrastructure utilities inside toolchains")
             }
 
@@ -47,7 +47,7 @@ subprojects {
         resolutionStrategy.eachDependency {
             when (requested.group) {
                 "org.bouncycastle" -> {
-                    useVersion("1.85.0")
+                    useVersion("1.85.2")
                     because("Fixes cryptographic vulnerabilities inside sub-module dependencies")
                 }
                 "org.apache.commons" -> {
