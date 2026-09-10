@@ -1,4 +1,4 @@
-package com.audiobridge.app
+Package com.audiobridge.app
 
 import android.Manifest
 import android.app.Application
@@ -91,21 +91,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setRole(role: DeviceRole) {
-        // Same reasoning as setTransport() above — switching roles mid-session can
-        // leave discovery/registration state pointed at the old role.
         stopDiscovery()
         unregisterSelf()
         updateConfig(_uiState.value.config.copy(role = role))
     }
 
     fun setTransport(transport: TransportMedium) {
-        // Without this, switching transports mid-session (e.g. WiFi Direct -> Hotspot)
-        // left the OLD transport's discovery job, broadcast receiver, and connection
-        // observer all still running in the background — competing with whatever the
-        // newly-selected transport tries to start next. That's the most likely cause
-        // of "switched transports and now nothing detects" — stale WiFi Direct state
-        // was still holding onto the WifiP2pManager broadcast receiver and/or socket
-        // resources the new Hotspot/mDNS discovery then couldn't cleanly claim.
         stopDiscovery()
         unregisterSelf()
 
@@ -151,17 +142,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updateConfig(newConfig: ConnectionConfig) {
-        // Config changes (transport, protocol, role) previously only updated UI state
-        // and preferences — they never touched an already-running AudioStreamService,
-        // which grabbed its transport/protocol instance once at Start and never
-        // rechecked it. Switching e.g. UDP -> TCP mid-stream silently left the OLD
-        // transport running while the UI relabeled itself, so nothing actually
-        // changed. Rather than block the change, we now flag it via
-        // pendingRestartConfig so MainActivity (which owns the AudioStreamService
-        // reference this ViewModel doesn't have) can cleanly restart the stream with
-        // the new settings. Receiver restarts silently; Sender can't (MediaProjection
-        // consent can't be re-triggered without user interaction) — MainActivity stops
-        // the sender stream and surfaces a message asking the user to tap Start again.
         val isActive = _uiState.value.connectionState != com.audiobridge.app.util.ConnectionState.IDLE
         val transportOrProtocolChanged = newConfig.transport != _uiState.value.config.transport ||
             newConfig.protocol != _uiState.value.config.protocol
@@ -183,11 +163,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val _pendingRestartConfig = kotlinx.coroutines.flow.MutableStateFlow<ConnectionConfig?>(null)
-    /** MainActivity observes this to know when to restart an active stream after a
-     * mid-stream transport/protocol change — see updateConfig() above. */
     val pendingRestartConfig: kotlinx.coroutines.flow.StateFlow<ConnectionConfig?> = _pendingRestartConfig
 
-    /** Called by MainActivity once it has actually acted on a pending restart. */
     fun clearPendingRestart() {
         _pendingRestartConfig.value = null
     }
@@ -310,7 +287,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         wifiDirectConnectionObserverJob?.cancel()
         wifiDirectConnectionObserverJob = viewModelScope.launch {
             wdManager.observeConnectionInfo()
-                .catch { /* best-effort — a failure here just means auto-resolution doesn't fire */ }
+                .catch { }
                 .collect { result ->
                     wifiDirectResolveJob?.cancel()
                     wifiDirectResolveJob = viewModelScope.launch {
@@ -405,6 +382,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun unregisterSelf() {
         discoveryManager.unregisterService()
+    }
+
+    /**
+     * Full reset for when the app gets into a stuck state a normal stop/switch
+     * doesn't clear — tears down discovery, registration, and config back to
+     * defaults. Does NOT touch the AudioStreamService directly (this ViewModel has
+     * no reference to it) — MainActivity's hard-reset handler calls stopStreaming()
+     * on the service alongside calling this.
+     */
+    fun hardReset() {
+        stopDiscovery()
+        unregisterSelf()
+        _uiState.value = MainUiState()
+        viewModelScope.launch {
+            runCatching { prefsManager.saveConfig(ConnectionConfig()) }
+        }
     }
 
     fun selectDevice(device: DiscoveredDevice) {
