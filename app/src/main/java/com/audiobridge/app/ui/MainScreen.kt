@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -72,7 +73,8 @@ fun MainScreen(
     onSelectWifiDirectPeer: (WifiDirectPeer) -> Unit,
     onSelectBluetoothDevice: (PairedBluetoothDevice) -> Unit,
     onStartStreaming: () -> Unit,
-    onStopStreaming: () -> Unit
+    onStopStreaming: () -> Unit,
+    onHardReset: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -108,7 +110,7 @@ fun MainScreen(
             if (uiState.connectionState == ConnectionState.STREAMING) {
                 item { StatsSection(uiState) }
             }
-            item { SettingsSection(uiState, onAutoReconnectChange) }
+            item { SettingsSection(uiState, onAutoReconnectChange, onHardReset) }
             item {
                 StreamControlButton(
                     uiState = uiState,
@@ -475,7 +477,13 @@ private fun StatsSection(uiState: MainUiState) {
 }
 
 @Composable
-private fun SettingsSection(uiState: MainUiState, onAutoReconnectChange: (Boolean) -> Unit) {
+private fun SettingsSection(
+    uiState: MainUiState,
+    onAutoReconnectChange: (Boolean) -> Unit,
+    onHardReset: () -> Unit
+) {
+    var showResetConfirm by remember { mutableStateOf(false) }
+
     SectionCard(title = "Settings") {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -492,6 +500,48 @@ private fun SettingsSection(uiState: MainUiState, onAutoReconnectChange: (Boolea
             }
             Switch(checked = uiState.autoReconnectEnabled, onCheckedChange = onAutoReconnectChange)
         }
+
+        Spacer(Modifier.height(4.dp))
+
+        Text(
+            "If discovery or streaming gets stuck and switching transports or " +
+                "restarting doesn't help, reset clears all connection state and " +
+                "settings back to defaults — no need to force-close the app.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        OutlinedButton(
+            onClick = { showResetConfirm = true },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        ) {
+            Text("Reset Connection")
+        }
+    }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text("Reset connection?") },
+            text = { Text("This stops any active stream, clears discovery state, and resets settings to defaults. This can't be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showResetConfirm = false
+                        onHardReset()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showResetConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
