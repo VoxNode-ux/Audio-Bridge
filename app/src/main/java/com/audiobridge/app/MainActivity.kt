@@ -217,6 +217,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun handleHardReset() {
+        audioService?.stopStreaming()
+        viewModel.hardReset()
+    }
+
     private fun defaultPortFor(protocol: com.audiobridge.app.util.SocketProtocol): Int =
         when (protocol) {
             com.audiobridge.app.util.SocketProtocol.UDP -> com.audiobridge.app.network.UDP_DEFAULT_PORT
@@ -256,4 +261,4 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 }
-
+ 
