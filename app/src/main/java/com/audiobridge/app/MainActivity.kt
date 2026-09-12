@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
                     config.transport,
                     config.protocol,
                     config.pcmFormat,
+                    config.codec,
                     bluetoothDevice
                 )
             }
