@@ -182,6 +182,7 @@ class AudioStreamService : Service() {
         transportMedium: TransportMedium,
         protocol: SocketProtocol,
         format: PcmFormat,
+        codec: AudioCodec = AudioCodec.PCM,
         bluetoothDevice: BluetoothDevice? = null
     ) {
         stopStreaming()
@@ -325,6 +326,7 @@ class AudioStreamService : Service() {
         transportMedium: TransportMedium,
         protocol: SocketProtocol,
         format: PcmFormat,
+        codec: AudioCodec = AudioCodec.PCM,
         initialVolume: Float,
         safetyBufferMs: Int = 120
     ) {
@@ -338,6 +340,14 @@ class AudioStreamService : Service() {
         playback.prepare(format)
         playback.setVolume(initialVolume)
         playbackEngine = playback
+
+        val opusFrameDurationMs = 20.0
+        val opusFrameSizeSamples = if (codec == AudioCodec.OPUS) {
+            (format.sampleRateHz * (opusFrameDurationMs / 1000.0)).toInt()
+        } else 0
+        val opusDecoder = if (codec == AudioCodec.OPUS) {
+            OpusCodec.forDecoding(format.sampleRateHz, stereo = true)
+        } else null
 
         streamingJob = serviceScope?.launch {
             var attempt = 0
@@ -353,6 +363,7 @@ class AudioStreamService : Service() {
                 )
                 if (transport == null) {
                     _connectionState.value = ConnectionState.ERROR
+                    opusDecoder?.close()
                     return@launch
                 }
                 activeTransport = transport
@@ -362,18 +373,32 @@ class AudioStreamService : Service() {
 
                 try {
                     transport.listen().collect { chunk ->
-                        playback.write(chunk.data, chunk.length)
+                        if (codec == AudioCodec.OPUS && opusDecoder != null) {
+                            // chunk.data here is one compressed Opus packet (the sender
+                            // encoded and sent exactly one packet per transport.send()
+                            // call in the OPUS path above) - decode it back to raw PCM
+                            // before handing to playback, which only ever deals in PCM.
+                            val decoded = opusDecoder.decode(
+                                chunk.data.copyOf(chunk.length),
+                                opusFrameSizeSamples
+                            )
+                            playback.write(decoded, decoded.size)
+                        } else {
+                            playback.write(chunk.data, chunk.length)
+                        }
                         _streamStats.value = chunk.stats
                     }
                     transport.close()
+                    opusDecoder?.close()
                     return@launch
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     transport.close()
+                    opusDecoder?.close()
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Receiving failed: ${e.message}")
                     transport.close()
-                    if (!retryOrFail(attempt, "listen")) return@launch
+                    if (!retryOrFail(attempt, "listen")) { opusDecoder?.close(); return@launch }
                     attempt++
                     continue
                 }
