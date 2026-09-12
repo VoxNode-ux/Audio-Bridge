@@ -291,6 +291,16 @@ private fun DiscoverySection(
             TransportMedium.WIFI_DIRECT -> {
                 ScanButton(isDiscovering = uiState.isDiscovering, onStartDiscovery = onStartDiscovery)
 
+                if (uiState.isDiscovering) {
+                    Text(
+                        "Wi-Fi Direct discovery involves both devices negotiating over " +
+                            "the radio — this commonly takes 10-30 seconds, sometimes longer. " +
+                            "This is normal, not stuck.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 uiState.wifiDirectPeers.forEach { peer ->
                     Column {
                         ListItem(
@@ -314,20 +324,10 @@ private fun DiscoverySection(
                 }
             }
 
-            TransportMedium.WIFI_DIRECT -> {
+            TransportMedium.HOTSPOT_WIFI -> {
                 ScanButton(isDiscovering = uiState.isDiscovering, onStartDiscovery = onStartDiscovery)
 
-                if (uiState.isDiscovering) {
-                    Text(
-                        "Wi-Fi Direct discovery involves both devices negotiating over " +
-                            "the radio — this commonly takes 10-30 seconds, sometimes longer. " +
-                            "This is normal, not stuck.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                uiState.wifiDirectPeers.forEach { device ->
+                uiState.discoveredDevices.forEach { device ->
                     val isSelected = device.host == uiState.config.lastDeviceHost &&
                         device.port == uiState.config.lastDevicePort
                     Column {
