@@ -90,7 +90,9 @@ composeCompiler {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.19.0")
-    
+
+implementation("io.voxkit:kopus-android:1.0.1")
+
     // Updated to stable 2.11.0
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
