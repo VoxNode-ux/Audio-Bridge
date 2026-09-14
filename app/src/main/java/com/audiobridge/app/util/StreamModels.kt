@@ -35,6 +35,18 @@ enum class PcmFormat(
 }
 
 /**
+ * Which codec compresses PCM before it goes on the wire. Independent of PcmFormat
+ * (which still controls capture sample rate/bit depth either way) — Opus needs a
+ * 48kHz-family sample rate (see OpusCodec.sampleRateFor), so selecting Opus while
+ * PCM_16_44 is active should steer the user to a 48kHz PcmFormat rather than
+ * silently resample or fail (see MainViewModel wiring).
+ */
+enum class AudioCodec(val label: String) {
+    OPUS("Opus (recommended — compressed, low bandwidth)"),
+    PCM("Raw PCM (uncompressed)")
+}
+
+/**
  * One chunk of raw captured PCM audio plus how many bytes of `data` are actually
  * valid. `data` may be a reused, larger-than-`length` buffer that the capture engine
  * keeps writing into on every read — every consumer must only read the first
@@ -144,6 +156,7 @@ data class ConnectionConfig(
     val transport: TransportMedium = TransportMedium.HOTSPOT_WIFI,
     val protocol: SocketProtocol = SocketProtocol.UDP,
     val pcmFormat: PcmFormat = PcmFormat.PCM_16_48,
+    val codec: AudioCodec = AudioCodec.OPUS,
     val lastDeviceName: String = "",
     val lastDeviceHost: String = "",
     val lastDevicePort: Int = 0,

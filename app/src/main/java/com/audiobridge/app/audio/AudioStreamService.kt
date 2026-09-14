@@ -27,6 +27,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.audiobridge.app.MainActivity
 import com.audiobridge.app.network.AudioTransport
+import com.audiobridge.app.util.AudioCodec
 import com.audiobridge.app.network.BluetoothReceiverTransport
 import com.audiobridge.app.network.BluetoothSenderTransport
 import com.audiobridge.app.network.TcpReceiverTransport
@@ -182,6 +183,7 @@ class AudioStreamService : Service() {
         transportMedium: TransportMedium,
         protocol: SocketProtocol,
         format: PcmFormat,
+        codec: AudioCodec = AudioCodec.PCM,
         bluetoothDevice: BluetoothDevice? = null
     ) {
         stopStreaming()
@@ -225,6 +227,23 @@ class AudioStreamService : Service() {
         val engine = AudioCaptureEngine(mediaProjection)
         captureEngine = engine
 
+        // Opus needs fixed-duration frames (see FixedFrameBuffer's doc comment) and
+        // stateful per-stream encoder/decoder instances (unlike PcmCompressor, which
+        // is a stateless object safe to call per-chunk with no setup) — both are
+        // created fresh per startSending() call and torn down with the stream, never
+        // reused across sessions.
+        val opusFrameDurationMs = 20.0
+        val opusFrameSizeBytes = if (codec == AudioCodec.OPUS) {
+            FixedFrameBuffer.opusFrameSizeBytes(format.sampleRateHz, format.bitDepth, 2, opusFrameDurationMs)
+        } else 0
+        val opusFrameSizeSamples = if (codec == AudioCodec.OPUS) {
+            (format.sampleRateHz * (opusFrameDurationMs / 1000.0)).toInt()
+        } else 0
+        val frameBuffer = if (codec == AudioCodec.OPUS) FixedFrameBuffer(opusFrameSizeBytes) else null
+        val opusEncoder = if (codec == AudioCodec.OPUS) {
+            OpusCodec.forEncoding(format.sampleRateHz, stereo = true)
+        } else null
+
         streamingJob = serviceScope?.launch {
             var attempt = 0
             while (attempt <= MAX_TRANSIENT_RETRIES) {
@@ -239,6 +258,7 @@ class AudioStreamService : Service() {
                 )
                 if (transport == null) {
                     _connectionState.value = ConnectionState.ERROR
+                    opusEncoder?.close()
                     return@launch
                 }
                 activeTransport = transport
@@ -246,23 +266,38 @@ class AudioStreamService : Service() {
                 val connected = transport.connect()
                 if (!connected) {
                     transport.close()
-                    if (!retryOrFail(attempt, "connect")) return@launch
+                    if (!retryOrFail(attempt, "connect")) { opusEncoder?.close(); return@launch }
                     attempt++
                     continue
                 }
 
                 _connectionState.value = ConnectionState.STREAMING
                 updateNotification("Streaming ($transportMedium) → $targetHost")
+                frameBuffer?.reset()
 
                 try {
                     engine.start(format).collect { chunk ->
-                        val sentCount = transport.send(chunk.data, chunk.length)
-                        _streamStats.value = _streamStats.value.copy(packetsSent = sentCount)
+                        if (codec == AudioCodec.OPUS && frameBuffer != null && opusEncoder != null) {
+                            // Opus path: re-slice into fixed frames, encode each one,
+                            // send the compressed result. A single AudioRecord read
+                            // may yield zero, one, or several Opus frames depending on
+                            // how its size lines up with the frame boundary.
+                            for (frame in frameBuffer.push(chunk.data, chunk.length)) {
+                                val encoded = opusEncoder.encode(frame, opusFrameSizeSamples)
+                                val sentCount = transport.send(encoded, encoded.size)
+                                _streamStats.value = _streamStats.value.copy(packetsSent = sentCount)
+                            }
+                        } else {
+                            // Raw PCM path — unchanged from before.
+                            val sentCount = transport.send(chunk.data, chunk.length)
+                            _streamStats.value = _streamStats.value.copy(packetsSent = sentCount)
+                        }
                     }
                     // engine.start()'s flow completing normally (not via exception) means
                     // the user called captureEngine.stop() — that's an intentional stop,
                     // not a drop, so exit the retry loop instead of reconnecting.
                     transport.close()
+                    opusEncoder?.close()
                     return@launch
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     // stopStreaming()/streamingJob.cancel() surfaces here — this is an
@@ -271,11 +306,12 @@ class AudioStreamService : Service() {
                     // would log a spurious failure and briefly bounce state through
                     // CONNECTING before actually stopping.
                     transport.close()
+                    opusEncoder?.close()
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Sending failed: ${e.message}")
                     transport.close()
-                    if (!retryOrFail(attempt, "stream")) return@launch
+                    if (!retryOrFail(attempt, "stream")) { opusEncoder?.close(); return@launch }
                     attempt++
                     continue
                 }
@@ -291,6 +327,7 @@ class AudioStreamService : Service() {
         transportMedium: TransportMedium,
         protocol: SocketProtocol,
         format: PcmFormat,
+        codec: AudioCodec = AudioCodec.PCM,
         initialVolume: Float,
         safetyBufferMs: Int = 120
     ) {
@@ -304,6 +341,14 @@ class AudioStreamService : Service() {
         playback.prepare(format)
         playback.setVolume(initialVolume)
         playbackEngine = playback
+
+        val opusFrameDurationMs = 20.0
+        val opusFrameSizeSamples = if (codec == AudioCodec.OPUS) {
+            (format.sampleRateHz * (opusFrameDurationMs / 1000.0)).toInt()
+        } else 0
+        val opusDecoder = if (codec == AudioCodec.OPUS) {
+            OpusCodec.forDecoding(format.sampleRateHz, stereo = true)
+        } else null
 
         streamingJob = serviceScope?.launch {
             var attempt = 0
@@ -319,6 +364,7 @@ class AudioStreamService : Service() {
                 )
                 if (transport == null) {
                     _connectionState.value = ConnectionState.ERROR
+                    opusDecoder?.close()
                     return@launch
                 }
                 activeTransport = transport
@@ -328,18 +374,32 @@ class AudioStreamService : Service() {
 
                 try {
                     transport.listen().collect { chunk ->
-                        playback.write(chunk.data, chunk.length)
+                        if (codec == AudioCodec.OPUS && opusDecoder != null) {
+                            // chunk.data here is one compressed Opus packet (the sender
+                            // encoded and sent exactly one packet per transport.send()
+                            // call in the OPUS path above) - decode it back to raw PCM
+                            // before handing to playback, which only ever deals in PCM.
+                            val decoded = opusDecoder.decode(
+                                chunk.data.copyOf(chunk.length),
+                                opusFrameSizeSamples
+                            )
+                            playback.write(decoded, decoded.size)
+                        } else {
+                            playback.write(chunk.data, chunk.length)
+                        }
                         _streamStats.value = chunk.stats
                     }
                     transport.close()
+                    opusDecoder?.close()
                     return@launch
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     transport.close()
+                    opusDecoder?.close()
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Receiving failed: ${e.message}")
                     transport.close()
-                    if (!retryOrFail(attempt, "listen")) return@launch
+                    if (!retryOrFail(attempt, "listen")) { opusDecoder?.close(); return@launch }
                     attempt++
                     continue
                 }
