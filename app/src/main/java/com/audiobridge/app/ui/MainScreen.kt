@@ -64,6 +64,7 @@ fun MainScreen(
     onRoleChange: (DeviceRole) -> Unit,
     onTransportChange: (TransportMedium) -> Unit,
     onProtocolChange: (SocketProtocol) -> Unit,
+    onCodecChange: (com.audiobridge.app.util.AudioCodec) -> Unit,
     onPcmFormatChange: (PcmFormat) -> Unit,
     onVolumeChange: (Float) -> Unit,
     onSafetyBufferChange: (Int) -> Unit,
@@ -92,7 +93,7 @@ fun MainScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { RoleSection(uiState, onRoleChange) }
-            item { TransportSection(uiState, onTransportChange, onProtocolChange) }
+            item { TransportSection(uiState, onTransportChange, onProtocolChange, onCodecChange) }
             item { PcmFormatSection(uiState, onPcmFormatChange) }
             item {
                 DiscoverySection(
