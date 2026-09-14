@@ -17,6 +17,7 @@ import com.audiobridge.app.discovery.WifiDirectManager
 import com.audiobridge.app.discovery.WifiDirectPeer
 import com.audiobridge.app.network.TCP_DEFAULT_PORT
 import com.audiobridge.app.network.UDP_DEFAULT_PORT
+import com.audiobridge.app.util.AudioCodec
 import com.audiobridge.app.util.ConnectionConfig
 import com.audiobridge.app.util.ConnectionState
 import com.audiobridge.app.util.DeviceRole
@@ -117,6 +118,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateConfig(_uiState.value.config.copy(pcmFormat = format))
     }
 
+    /**
+     * Opus needs a 48kHz-family sample rate (see OpusCodec.sampleRateFor) — switching
+     * to Opus while a non-48kHz PcmFormat is active isn't blocked here (the UI shows
+     * a warning instead, in MainScreen's TransportSection), since forcing a silent
+     * format change out from under a user-selected PCM format would be a worse
+     * surprise than a visible warning asking them to fix it themselves.
+     */
+    fun setCodec(codec: AudioCodec) {
+        updateConfig(_uiState.value.config.copy(codec = codec))
+    }
+
     fun setVolume(volume: Float) {
         updateConfig(_uiState.value.config.copy(volume = volume))
     }
@@ -142,9 +154,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updateConfig(newConfig: ConnectionConfig) {
+        // Config changes (transport, protocol, codec, role) previously only updated
+        // UI state and preferences — they never touched an already-running
+        // AudioStreamService, which grabbed its transport/protocol/codec instance
+        // once at Start and never rechecked it. Switching any of these mid-stream
+        // silently left the OLD session running while the UI relabeled itself.
+        // Flagging it via pendingRestartConfig lets MainActivity (which owns the
+        // AudioStreamService reference this ViewModel doesn't have) cleanly restart
+        // the stream with the new settings — see MainActivity's collector on
+        // pendingRestartConfig for the Receiver-auto-restarts / Sender-needs-a-tap
+        // split (MediaProjection consent can't be silently re-triggered).
         val isActive = _uiState.value.connectionState != com.audiobridge.app.util.ConnectionState.IDLE
         val transportOrProtocolChanged = newConfig.transport != _uiState.value.config.transport ||
-            newConfig.protocol != _uiState.value.config.protocol
+            newConfig.protocol != _uiState.value.config.protocol ||
+            newConfig.codec != _uiState.value.config.codec
 
         _uiState.value = _uiState.value.copy(config = newConfig)
 
@@ -310,9 +333,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             result.groupOwnerAddress
         }
 
-        if (resolvedHost == null) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Connected over Wi-Fi Direct as the group host, but couldn't detect the " +
                     "other device's address yet. Make sure AudioBridge is open on the other device too, " +
                     "then try connecting again."
             )
@@ -354,37 +374,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun stopDiscovery() {
-        nsdDiscoveryJob?.cancel()
-        nsdDiscoveryJob = null
-        discoveryManager.stopDiscovery()
-
-        wifiDirectDiscoveryJob?.cancel()
-        wifiDirectDiscoveryJob = null
-        wifiDirectConnectionObserverJob?.cancel()
-        wifiDirectConnectionObserverJob = null
-        wifiDirectResolveJob?.cancel()
-        wifiDirectResolveJob = null
-        unregisterWifiDirectReceiver?.invoke()
-        unregisterWifiDirectReceiver = null
-
-        _uiState.value = _uiState.value.copy(isDiscovering = false)
-    }
-
-    fun registerSelf(deviceName: String) {
-        val role = _uiState.value.config.role
-        val port = when (_uiState.value.config.protocol) {
-            SocketProtocol.UDP -> UDP_DEFAULT_PORT
-            SocketProtocol.TCP -> TCP_DEFAULT_PORT
-        }
-        discoveryManager.registerService(deviceName, port, role)
-    }
-
-    fun unregisterSelf() {
-        discoveryManager.unregisterService()
-    }
-
-    /**
      * Full reset for when the app gets into a stuck state a normal stop/switch
      * doesn't clear — tears down discovery, registration, and config back to
      * defaults. Does NOT touch the AudioStreamService directly (this ViewModel has
@@ -422,4 +411,3 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
     }
 }
- 
