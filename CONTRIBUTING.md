@@ -28,7 +28,7 @@ Requires JDK 21 and the Android SDK (`compileSdk 37`, `minSdk 29`).
 
 ```bash
 git clone https://github.com/VoxNode-ux/Audio-Bridge.git
-cd Audio-Stream
+cd Audio-Bridge
 ./gradlew assembleDebug
 ```
 
