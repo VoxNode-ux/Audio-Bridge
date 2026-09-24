@@ -6,9 +6,9 @@
 
 **Stream system audio between Android devices over your local network — no cloud, no accounts, no internet.**
 
-[![Build](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/build.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/build.yml)
-[![CodeQL](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/codeql.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/codeql.yml)
-[![Trivy Security Scan](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/dependency-security-scan.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Stream/actions/workflows/dependency-security-scan.yml)
+[![Build](https://github.com/VoxNode-ux/Audio-Bridge/actions/workflows/build.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Bridge/actions/workflows/build.yml)
+[![CodeQL](https://github.com/VoxNode-ux/Audio-Bridge/actions/workflows/codeql.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Bridge/actions/workflows/codeql.yml)
+[![Trivy Security Scan](https://github.com/VoxNode-ux/Audio-Bridge/actions/workflows/dependency-security-scan.yml/badge.svg)](https://github.com/VoxNode-ux/Audio-Bridge/actions/workflows/dependency-security-scan.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android%2010%2B-3DDC84?logo=android&logoColor=white)](#requirements)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
@@ -205,7 +205,7 @@ AudioBridge requests only what each active feature needs — nothing is requeste
 **Requirements:** JDK 21, Android SDK (`compileSdk 37`, `minSdk 29`)
 
 ```bash
-git clone https://github.com/VoxNode-ux/Audio-Stream.git
+git clone https://github.com/VoxNode-ux/Audio-Bridge.git
 cd Audio-Stream
 ./gradlew assembleDebug
 ```
@@ -278,7 +278,7 @@ Dependency updates are managed by **Dependabot** with grouped security updates e
 - [ ] Reduce debug/release APK size further via resource shrinking tuning
 - [ ] In-app latency auto-tuning based on live packet loss
 
-Have an idea? Open an [issue](https://github.com/VoxNode-ux/Audio-Stream/issues).
+Have an idea? Open an [issue](https://github.com/VoxNode-ux/Audio-Bridge/issues).
 
 ## Contributing
 
