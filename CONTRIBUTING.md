@@ -6,8 +6,8 @@ fixes to new features.
 
 ## Before you start
 
-- Check existing [issues](https://github.com/VoxNode-ux/Audio-Stream/issues)
-  and [pull requests](https://github.com/VoxNode-ux/Audio-Stream/pulls) to
+- Check existing [issues](https://github.com/VoxNode-ux/Audio-Bridge/issues)
+  and [pull requests](https://github.com/VoxNode-ux/Audio-Bridge/pulls) to
   avoid duplicate work.
 - For anything larger than a small fix, open an issue first to discuss the
   approach before writing code — this saves everyone time if the direction
@@ -27,7 +27,7 @@ fixes to new features.
 Requires JDK 21 and the Android SDK (`compileSdk 37`, `minSdk 29`).
 
 ```bash
-git clone https://github.com/VoxNode-ux/Audio-Stream.git
+git clone https://github.com/VoxNode-ux/Audio-Bridge.git
 cd Audio-Stream
 ./gradlew assembleDebug
 ```
@@ -74,5 +74,5 @@ Please **do not** open a public issue for security vulnerabilities — see
 
 ## Questions
 
-Open a [discussion](https://github.com/VoxNode-ux/Audio-Stream/discussions)
+Open a [discussion](https://github.com/VoxNode-ux/Audio-Bridge/discussions)
 or an issue tagged `question`.
