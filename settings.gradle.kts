@@ -14,6 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Audio-Stream"
+rootProject.name = "Audio-Bridge"
 include(":app")
  
