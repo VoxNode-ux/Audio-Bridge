@@ -18,7 +18,7 @@ older versions at this stage.
 Instead, report it privately using one of these methods:
 
 1. **GitHub Private Vulnerability Reporting** (preferred): go to the
-   [Security tab](https://github.com/VoxNode-ux/Audio-Stream/security) of
+   [Security tab](https://github.com/VoxNode-ux/Audio-Bridge/security) of
    this repository and click **"Report a vulnerability"**.
 2. If that's unavailable, open a regular issue with minimal detail (e.g.
    "Potential security issue — will follow up privately") and a maintainer
