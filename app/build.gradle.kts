@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.audiobridge.app"
-    // Bumped to 37 (from 36) alongside the AGP 9.4.0 upgrade — androidx.core:core-ktx
+    // Bumped to 37 (from 36) alongside the AGP 9.4.1 upgrade — androidx.core:core-ktx
     // 1.19.0 and the Compose 1.12.0 artifacts both hard-require compileSdk 37+ and
     // AGP 9.1.0+ to compile at all (confirmed via a real CI failure: CheckAarMetadata
     // rejected the build with "requires libraries and applications that depend on it
