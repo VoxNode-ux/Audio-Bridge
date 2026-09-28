@@ -29,7 +29,7 @@ buildscript {
             }
 
             // 5. Patches JSON Web Encryption Decompression Memory Exhaustion Loops in plugins
-            classpath("org.bitbucket.b_c:jose4j:0.9.6") {
+            classpath("org.bitbucket.b_c:jose4j:0.9.7") {
                 because("Overrides vulnerable token parsing libraries embedded in AGP metadata integrations")
             }
         }
