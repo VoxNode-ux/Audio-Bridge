@@ -206,7 +206,7 @@ AudioBridge requests only what each active feature needs — nothing is requeste
 
 ```bash
 git clone https://github.com/VoxNode-ux/Audio-Bridge.git
-cd Audio-Stream
+cd Audio-Bridge
 ./gradlew assembleDebug
 ```
 
