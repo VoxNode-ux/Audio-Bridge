@@ -56,7 +56,8 @@ jobs:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
-      - - name: Decode keystore
+
+      - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
 
       - name: Build signed release APK
@@ -73,3 +74,4 @@ jobs:
           name: app-release-signed
           path: app/build/outputs/apk/release/*.apk
           retention-days: 14
+           
