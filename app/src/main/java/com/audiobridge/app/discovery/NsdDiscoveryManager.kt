@@ -207,9 +207,10 @@ class NsdDiscoveryManager(private val context: Context) {
     }
 
     fun stopDiscovery() {
-        discoveryListener?.let {
-            runCatching { nsdManager.stopServiceDiscovery(it) }
-        }
-        discoveryListener = null
+    discoveryListener?.let {
+        runCatching { nsdManager.stopServiceDiscovery(it) }
+        runCatching { if (multicastLock.isHeld) multicastLock.release() }
     }
+    discoveryListener = null
 }
+ 
