@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-AudioBridge is currently pre-1.0 / actively developed. Security fixes are
+AudioBridge is currently v0.9.0-beta / actively developed. Security fixes are
 applied to the latest code on `main`. There is no long-term support for
 older versions at this stage.
 
