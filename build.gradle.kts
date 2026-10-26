@@ -19,7 +19,7 @@ buildscript {
             }
 
             // 3. Patches CVE-2025-48924 Uncontrolled Recursion Denial of Service Flaw in tools
-            classpath("org.apache.commons:commons-lang3:3.20.0") {
+            classpath("org.apache.commons:commons-lang3:3.21.0") {
                 because("Overrides vulnerable string formatting libraries bundled by build scripts")
             }
 
