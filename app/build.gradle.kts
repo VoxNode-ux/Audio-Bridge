@@ -115,7 +115,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     // Updated to stable 1.2.1
-    implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation("androidx.datastore:datastore-preferences:1.3.0")
 
     // Coroutines for async audio/network work
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
